@@ -18,9 +18,9 @@ Repository này được tạo ra để học và thực hành lập trình STM3
      * Các chân vào/ra đa năng
      * Có thể cấu hình là input hoặc output
      Input có các chể độ:
-     image.png
+     ![alt text](image.png)
      Output có các chế độ:
-     image.png
+     ![alt text](image-1.png)
      * Điều khiển/đọc tín hiệu số (0V hoặc 3.3V)
    
    - Các tính năng của GPIO
