@@ -90,10 +90,17 @@ Repository này được tạo ra để học và thực hành lập trình STM3
 - Điện chảy từ nói có điện áp cao về nơi có điện áp thấp.
 ## Tài liệu tham khảo
 
-- [STM32F411xC/E Reference Manual (RM0383)](https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf)
-- [STM32F411xC/E Datasheet](https://www.st.com/resource/en/datasheet/stm32f411ce.pdf)
-- [ARM Cortex-M4 Technical Reference Manual](https://developer.arm.com/documentation/100166/0001)
-- [Programming Manual (PM0214)](https://www.st.com/resource/en/programming_manual/dm00046982-stm32-cortex-m4-mcus-and-mpus-programming-manual-stmicroelectronics.pdf)
+- [STM32F411xC/E Reference Manual (RM0383)](https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf)  
+  *Note: Tài liệu chính để tra cứu chi tiết về thanh ghi, cách cấu hình và hoạt động của các peripheral như GPIO, UART, Timer,...*
+
+- [STM32F411xC/E Datasheet](https://www.st.com/resource/en/datasheet/stm32f411ce.pdf)  
+  *Note: Chứa thông tin về đặc tính điện, sơ đồ chân, điều kiện hoạt động và giới hạn của chip*
+
+- [ARM Cortex-M4 Technical Reference Manual](https://developer.arm.com/documentation/100166/0001)  
+  *Note: Tài liệu về kiến trúc CPU, cách hoạt động của core, hệ thống ngắt và các chế độ hoạt động của Cortex-M4*
+
+- [Programming Manual (PM0214)](https://www.st.com/resource/en/programming_manual/dm00046982-stm32-cortex-m4-mcus-and-mpus-programming-manual-stmicroelectronics.pdf)  
+  *Note: Hướng dẫn lập trình, tập lệnh assembly và các kỹ thuật tối ưu cho Cortex-M4*
 
 ## Cấu trúc thư mục
 
