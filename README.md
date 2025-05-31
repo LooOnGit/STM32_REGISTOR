@@ -88,6 +88,113 @@ Repository này được tạo ra để học và thực hành lập trình STM3
 **Note:** 
 - Trong diện tử digital mức 0 và mức 1 theo tiêu chuẩn TTL (0: 0- 0.8V, 1: 2.4 - VCC).
 - Điện chảy từ nói có điện áp cao về nơi có điện áp thấp.
+
+### Bài 2: EXTI (External Interrupts)
+
+1. Tổng quan về EXTI
+   - EXTI là gì?
+     * External Interrupt/Event Controller
+     * Cho phép tạo ngắt từ các nguồn bên ngoài
+     * 23 đường EXTI (EXTI0 đến EXTI22)
+     * Mỗi GPIO pin có thể kết nối với một line EXTI tương ứng
+
+   - Đặc điểm của EXTI
+     * Có thể cấu hình cạnh kích hoạt (rising/falling)
+     * Có thể hoạt động ở chế độ event hoặc interrupt
+     * Độc lập với các chức năng GPIO khác
+     * Có thể đánh thức MCU từ sleep mode
+
+2. Cấu trúc EXTI
+   - EXTI line selection
+   - Edge trigger selection
+   - Interrupt mask register
+   - Event mask register
+   - Pending register
+
+3. Các bước cấu hình EXTI
+   a. Cấu hình GPIO
+      * Enable clock cho GPIO port
+      * Cấu hình pin là input mode
+      * Cấu hình pull-up/pull-down nếu cần
+   
+   b. Cấu hình SYSCFG
+      * Enable clock cho SYSCFG
+      * Chọn GPIO port cho EXTI line (SYSCFG_EXTICR)
+   
+   c. Cấu hình EXTI
+      * Chọn cạnh kích hoạt (EXTI_RTSR/FTSR)
+      * Enable interrupt hoặc event (EXTI_IMR/EMR)
+      * Clear pending flag nếu có
+   
+   d. Cấu hình NVIC
+      * Set priority cho interrupt
+      * Enable interrupt trong NVIC
+
+4. Các thanh ghi quan trọng
+   - SYSCFG_EXTICR1-4: External interrupt configuration
+   - EXTI_IMR: Interrupt mask register
+   - EXTI_EMR: Event mask register
+   - EXTI_RTSR: Rising trigger selection
+   - EXTI_FTSR: Falling trigger selection
+   - EXTI_PR: Pending register
+
+5. Xử lý ngắt EXTI
+   - Kiểm tra pending flag
+   - Thực hiện công việc cần thiết
+   - Clear pending flag
+   - Debouncing nếu cần (với nút nhấn)
+
+6. Lưu ý quan trọng
+   - Mỗi EXTI line chỉ kết nối được với một GPIO pin
+   - Cần xử lý ngắt nhanh để tránh miss event
+   - Nên có debouncing với input cơ học
+   - Clear pending flag trước khi enable interrupt
+
+7. Luồng hoạt động của EXTI
+   a. Khi có sự kiện xảy ra:
+      * Tín hiệu từ GPIO pin được đưa vào EXTI line tương ứng
+      * EXTI controller kiểm tra điều kiện kích hoạt (rising/falling edge)
+      * Nếu match điều kiện, EXTI set pending flag (EXTI_PR)
+      * Nếu interrupt được enable (trong EXTI_IMR), ngắt được gửi tới NVIC
+      * NVIC kiểm tra priority và trạng thái enable
+      * CPU nhảy tới vector table và thực thi ISR tương ứng
+      
+
+   Sơ đồ khối của EXTI:
+   ```
+   ┌──────────────────────────────────┐
+   │              ARM                 │
+   │                           ┌────┐ │
+   │                      ├────┤NVIC│ │
+   │                           └────┘ │
+   │         Interrupt Event          │
+   │              ▲                   │
+   │              │                   │
+   │         ┌────┴─────┐            │
+   │         │   EXTI   │            │
+   │         └────┬─────┘            │
+   │              │                   │
+   │         ┌────┴─────┐            │
+   │         │  GPIOx   │            │
+   │         └──────────┘            │
+   │        STM32F411               │
+   └──────────────────────────────────┘
+   GPIO → EXTI → NVIC → ARM Core
+   ```
+
+   b. Trong Interrupt Service Routine (ISR):
+      * Kiểm tra pending flag để xác định EXTI line nào gây ngắt
+      * Thực hiện công việc cần thiết
+      * Clear pending flag bằng cách ghi 1 vào bit tương ứng trong EXTI_PR
+      * CPU trở về thực thi chương trình chính
+
+   c. Ví dụ với nút nhấn:
+      * Khi nút được nhấn, tạo ra falling edge
+      * EXTI phát hiện falling edge và set pending flag
+      * CPU nhảy vào ISR
+      * Trong ISR: Toggle LED, clear flag
+      * Quay lại chương trình chính
+
 ## Tài liệu tham khảo
 
 - [STM32F411xC/E Reference Manual (RM0383)](https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf)  
