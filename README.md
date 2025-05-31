@@ -274,62 +274,6 @@ Repository này được tạo ra để học và thực hành lập trình STM3
          thì ra 
          coi được từ lúc reset chạy những gì
       ```c
-      /**
-  ******************************************************************************
-  * @file      startup_stm32f411xe.s
-  * @author    MCD Application Team
-  * @brief     STM32F411xExx Devices vector table for GCC based toolchains. 
-  *            This module performs:
-  *                - Set the initial SP
-  *                - Set the initial PC == Reset_Handler,
-  *                - Set the vector table entries with the exceptions ISR address
-  *                - Branches to main in the C library (which eventually
-  *                  calls main()).
-  *            After Reset the Cortex-M4 processor is in Thread mode,
-  *            priority is Privileged, and the Stack is set to Main.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2017 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-    
-  .syntax unified
-  .cpu cortex-m4
-  .fpu softvfp
-  .thumb
-
-.global  g_pfnVectors
-.global  Default_Handler
-
-/* start address for the initialization values of the .data section. 
-defined in linker script */
-.word  _sidata
-/* start address for the .data section. defined in linker script */  
-.word  _sdata
-/* end address for the .data section. defined in linker script */
-.word  _edata
-/* start address for the .bss section. defined in linker script */
-.word  _sbss
-/* end address for the .bss section. defined in linker script */
-.word  _ebss
-/* stack used for SystemInit_ExtMemCtl; always internal RAM used */
-
-/**
- * @brief  This is the code that gets called when the processor first
- *          starts execution following a reset event. Only the absolutely
- *          necessary set is performed, after which the application
- *          supplied main() routine is called. 
- * @param  None
- * @retval : None
-*/
-
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
