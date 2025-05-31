@@ -236,3 +236,6 @@ Command-line arguments:  -os win32 -ws win32 -arch x86_64
 
 !ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2025-05-31 13:46:39.867
 !MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY org.eclipse.cdt.core 1 0 2025-05-31 14:53:43.085
+!MESSAGE Indexed 'STM32F4' (21 sources, 117 headers) in 3.02 sec: 10,778 declarations; 36,907 references; 1 unresolved inclusions; 92 syntax errors; 240 unresolved names (0.5%)

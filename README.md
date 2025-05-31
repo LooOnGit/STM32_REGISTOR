@@ -251,6 +251,180 @@ Repository này được tạo ra để học và thực hành lập trình STM3
       * Nên có debouncing cho input cơ học
       * Không nên gọi hàm delay trong handler
 
+   8. Ngắt Reset:
+      a. Các loại Reset:
+         * Power Reset: Khi cấp nguồn hoặc mất nguồn
+         * Pin Reset: Khi chân NRST được kích hoạt
+         * Software Reset: Khi phần mềm yêu cầu reset
+         * Watchdog Reset: Khi watchdog timeout
+         * Low Power Reset: Khi thoát chế độ low power
+
+      b. Quá trình xử lý Reset:
+         * CPU dừng thực thi chương trình hiện tại
+         * Các thanh ghi trở về giá trị mặc định
+         * Program Counter (PC) nạp địa chỉ 0x00000000
+         * Stack Pointer (SP) nạp giá trị từ 0x00000000
+         * Bắt đầu thực thi từ Reset Handler
+         ![alt text](image-2.png)
+         trong 1 file bin build tu 1 chương trình thi 0x0004 đang chứa giá trị 0800078D đọc 4byte mở file .map xem (à đoạn nay nhiều phần mềm ghi 8D 07 00 08 thì đọc từ sau đến trước nhé)
+         ![alt text](image-3.png)
+         tra 0x0800078 thì ra có chứa hàm reset handler nằm trong file startup_.... .o
+         ctrl + H search trong cubeide tìm 
+         ![alt text](image-4.png)
+         thì ra 
+         coi được từ lúc reset chạy những gì
+      ```c
+      /**
+  ******************************************************************************
+  * @file      startup_stm32f411xe.s
+  * @author    MCD Application Team
+  * @brief     STM32F411xExx Devices vector table for GCC based toolchains. 
+  *            This module performs:
+  *                - Set the initial SP
+  *                - Set the initial PC == Reset_Handler,
+  *                - Set the vector table entries with the exceptions ISR address
+  *                - Branches to main in the C library (which eventually
+  *                  calls main()).
+  *            After Reset the Cortex-M4 processor is in Thread mode,
+  *            priority is Privileged, and the Stack is set to Main.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
+    
+  .syntax unified
+  .cpu cortex-m4
+  .fpu softvfp
+  .thumb
+
+.global  g_pfnVectors
+.global  Default_Handler
+
+/* start address for the initialization values of the .data section. 
+defined in linker script */
+.word  _sidata
+/* start address for the .data section. defined in linker script */  
+.word  _sdata
+/* end address for the .data section. defined in linker script */
+.word  _edata
+/* start address for the .bss section. defined in linker script */
+.word  _sbss
+/* end address for the .bss section. defined in linker script */
+.word  _ebss
+/* stack used for SystemInit_ExtMemCtl; always internal RAM used */
+
+/**
+ * @brief  This is the code that gets called when the processor first
+ *          starts execution following a reset event. Only the absolutely
+ *          necessary set is performed, after which the application
+ *          supplied main() routine is called. 
+ * @param  None
+ * @retval : None
+*/
+
+    .section  .text.Reset_Handler
+  .weak  Reset_Handler
+  .type  Reset_Handler, %function
+Reset_Handler:  
+  ldr   sp, =_estack    		 /* set stack pointer */
+
+/* Call the clock system initialization function.*/
+  bl  SystemInit   
+
+/* Copy the data segment initializers from flash to SRAM */  
+  ldr r0, =_sdata
+  ldr r1, =_edata
+  ldr r2, =_sidata
+  movs r3, #0
+  b LoopCopyDataInit
+
+CopyDataInit:
+  ldr r4, [r2, r3]
+  str r4, [r0, r3]
+  adds r3, r3, #4
+
+LoopCopyDataInit:
+  adds r4, r0, r3
+  cmp r4, r1
+  bcc CopyDataInit
+  
+/* Zero fill the bss segment. */
+  ldr r2, =_sbss
+  ldr r4, =_ebss
+  movs r3, #0
+  b LoopFillZerobss
+
+FillZerobss:
+  str  r3, [r2]
+  adds r2, r2, #4
+
+LoopFillZerobss:
+  cmp r2, r4
+  bcc FillZerobss
+
+/* Call static constructors */
+    bl __libc_init_array
+/* Call the application's entry point.*/
+  bl  main
+  bx  lr    
+.size  Reset_Handler, .-Reset_Handler
+      ```
+
+      c. Vector Table sau Reset:
+         ```
+         Vector Table
+         +------------------------+
+         | 0x0000: Stack Pointer |  <-- SP initial value
+         +------------------------+
+         | 0x0004: Reset Handler |  <-- Reset Vector
+         |     0x1800000         |      (trỏ tới Reset_Handler)
+         +------------------------+
+         | 0x0008: NMI Handler   |
+         +------------------------+
+         | 0x000C: HardFault     |
+         +------------------------+
+                   ...
+
+         Tại địa chỉ 0x1800000:
+         void Reset_Handler(void)
+         {
+             // 1. Khởi tạo stack pointer
+             // 2. Copy .data từ Flash sang RAM
+             // 3. Zero .bss section
+             // 4. Gọi SystemInit()
+             // 5. Gọi main()
+         }
+         ```
+
+         Giải thích:
+         - Khi reset, CPU đọc địa chỉ 0x0004 trong Vector Table
+         - Tại 0x0004 chứa địa chỉ của hàm Reset_Handler (ví dụ: 0x1800000)
+         - CPU nhảy đến địa chỉ này để thực thi các bước khởi tạo hệ thống
+         - Sau khi khởi tạo xong, chương trình nhảy vào hàm main()
+
+      d. Các bước khởi tạo hệ thống:
+         1. Khởi tạo Stack Pointer
+         2. Thực thi Reset Handler:
+            - Khởi tạo biến .data từ flash
+            - Clear biến .bss
+            - Cấu hình clock system
+            - Gọi các hàm khởi tạo (SystemInit)
+            - Gọi main()
+
+      e. Lưu ý quan trọng:
+         * Luôn kiểm tra nguồn gốc reset (RCC_CSR)
+         * Backup dữ liệu quan trọng trước khi reset
+         * Xử lý các ngoại vi an toàn trước reset
+         * Cấu hình watchdog phù hợp để tránh reset ngoài ý muốn
+
 ## Tài liệu tham khảo
 
 - [STM32F411xC/E Reference Manual (RM0383)](https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf)  
