@@ -193,23 +193,30 @@ Repository này được tạo ra để học và thực hành lập trình STM3
 
    Ví dụ cơ chế trỏ hàm handler:
    ```
-   Vector Table (0x0058)                Memory Address (0x1800000)
-   ┌──────────────────┐                ┌─────────────────────────┐
-   │                  │                │  void EXTI0_Handler()   │
-   │ 0x1800000  ─────────────────────> │  {                     │
-   │                  │                │    // Xử lý ngắt        │
-   └──────────────────┘                │    // Clear flag        │
-                                       │  }                      │
-                                       └─────────────────────────┘
+   1. Vector Table (0x0058)
+   +-------------------+
+   |    0x1800000     |    ----+
+   +-------------------+        |
+                               |
+   2. Memory Address          \|/
+   +-------------------+    0x1800000
+   | void EXTI0_Handler|
+   | {                |
+   |   // Xử lý ngắt  |
+   |   // Clear flag  |
+   | }                |
+   +-------------------+
    ```
 
-   Giải thích:
-   - Vector Table tại địa chỉ 0x0058 chứa giá trị 0x1800000
-   - 0x1800000 là địa chỉ của hàm handler EXTI0
-   - Khi có ngắt, CPU sẽ:
-     1. Đọc giá trị tại 0x0058 (là 0x1800000)
-     2. Nhảy đến địa chỉ 0x1800000
-     3. Thực thi code trong hàm handler
+   Giải thích cơ chế:
+   1. Tại Vector Table (0x0058):
+      - Chứa địa chỉ của hàm handler (0x1800000)
+      - Khi có ngắt EXTI0, CPU sẽ đọc địa chỉ này
+
+   2. Tại Memory (0x1800000):
+      - Chứa code của hàm handler
+      - CPU nhảy đến đây để thực thi
+      - Sau khi thực thi xong sẽ quay về chương trình chính
 
    Luồng hoạt động chi tiết:
    1. Khởi tạo và cấu hình:
