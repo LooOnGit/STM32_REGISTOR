@@ -151,49 +151,93 @@ Repository này được tạo ra để học và thực hành lập trình STM3
    - Clear pending flag trước khi enable interrupt
 
 7. Luồng hoạt động của EXTI
-   a. Khi có sự kiện xảy ra:
-      * Tín hiệu từ GPIO pin được đưa vào EXTI line tương ứng
-      * EXTI controller kiểm tra điều kiện kích hoạt (rising/falling edge)
-      * Nếu match điều kiện, EXTI set pending flag (EXTI_PR)
-      * Nếu interrupt được enable (trong EXTI_IMR), ngắt được gửi tới NVIC
-      * NVIC kiểm tra priority và trạng thái enable
-      * CPU nhảy tới vector table và thực thi ISR tương ứng
-      
-
    Sơ đồ khối của EXTI:
    ```
-   ┌──────────────────────────────────┐
-   │              ARM                 │
-   │                           ┌────┐ │
-   │                      ├────┤NVIC│ │
-   │                           └────┘ │
-   │         Interrupt Event          │
-   │              ▲                   │
-   │              │                   │
-   │         ┌────┴─────┐            │
-   │         │   EXTI   │            │
-   │         └────┬─────┘            │
-   │              │                   │
-   │         ┌────┴─────┐            │
-   │         │  GPIOx   │            │
-   │         └──────────┘            │
-   │        STM32F411               │
-   └──────────────────────────────────┘
-   GPIO → EXTI → NVIC → ARM Core
+   ┌──────────────────────────────────────────────────────┐
+   │                      STM32F411                       │
+   │                                                      │
+   │  GPIO Pin        EXTI          NVIC         ARM     │
+   │     │             │             │            │      │
+   │     │  Event      │             │            │      │
+   │     │─────────────>             │            │      │
+   │     │             │             │            │      │
+   │     │             │ If Enabled  │            │      │
+   │     │             │─────────────>            │      │
+   │     │             │             │            │      │
+   │     │             │             │ Interrupt  │      │
+   │     │             │             │───────────>│      │
+   │     │             │             │            │      │
+   │     │             │             │            │      │
+   │     │             │             │   Execute  │      │
+   │     │             │             │     ISR    │      │
+   │     │             │             │   <─────── │      │
+   │     │             │             │            │      │
+   └──────────────────────────────────────────────────────┘
    ```
 
-   b. Trong Interrupt Service Routine (ISR):
-      * Kiểm tra pending flag để xác định EXTI line nào gây ngắt
-      * Thực hiện công việc cần thiết
-      * Clear pending flag bằng cách ghi 1 vào bit tương ứng trong EXTI_PR
-      * CPU trở về thực thi chương trình chính
+   Vector Table của EXTI:
+   ```
+   ┌───────────────────────────────────────────────────┐
+   │                 Vector Table                      │
+   ├─────┬─────┬──────────┬────────────────┬─────────┤
+   │ 6   │ 13  │ EXTI0    │ Line0 IRQ      │ 0x0058  │
+   ├─────┼─────┼──────────┼────────────────┼─────────┤
+   │ 7   │ 14  │ EXTI1    │ Line1 IRQ      │ 0x005C  │
+   ├─────┼─────┼──────────┼────────────────┼─────────┤
+   │ 8   │ 15  │ EXTI2    │ Line2 IRQ      │ 0x0060  │
+   ├─────┼─────┼──────────┼────────────────┼─────────┤
+   │ 9   │ 16  │ EXTI3    │ Line3 IRQ      │ 0x0064  │
+   ├─────┼─────┼──────────┼────────────────┼─────────┤
+   │ 10  │ 17  │ EXTI4    │ Line4 IRQ      │ 0x0068  │
+   └─────┴─────┴──────────┴────────────────┴─────────┘
 
-   c. Ví dụ với nút nhấn:
-      * Khi nút được nhấn, tạo ra falling edge
-      * EXTI phát hiện falling edge và set pending flag
-      * CPU nhảy vào ISR
-      * Trong ISR: Toggle LED, clear flag
-      * Quay lại chương trình chính
+   Ví dụ cơ chế trỏ hàm handler:
+   ```
+   ┌─────────────┐
+   │ Vector Table│
+   │  0x0058     │──┐     ┌───────────────────┐
+   └─────────────┘  │     │ void EXTI0_Handler│
+                    │     │ {                  │
+   Memory Address   └────>│   // Xử lý ngắt   │
+   0x1800000             │   // Clear flag    │
+                         │ }                   │
+                         └───────────────────┘
+   ```
+
+   Ví dụ; có hàm handler cho exti0 thi tại địa chỉ của nó là 0x0058 sẽ chứa địa chỉ của hàm handler
+
+   Luồng hoạt động chi tiết:
+   1. Khởi tạo và cấu hình:
+      * Enable clock cho GPIO và SYSCFG
+      * Cấu hình GPIO pin là input mode
+      * Map GPIO pin với EXTI line qua SYSCFG_EXTICR
+      * Cấu hình trigger (rising/falling) trong EXTI_RTSR/FTSR
+      * Enable interrupt trong EXTI_IMR
+      * Cấu hình priority và enable NVIC
+
+   2. Khi có sự kiện xảy ra:
+      * GPIO pin phát hiện thay đổi mức (ví dụ: nút nhấn)
+      * EXTI controller kiểm tra điều kiện trigger
+      * Nếu match điều kiện → Set pending flag trong EXTI_PR
+      * NVIC nhận được yêu cầu ngắt
+      * NVIC kiểm tra priority và trạng thái enable
+      * CPU tạm dừng chương trình chính
+
+   3. Xử lý ngắt:
+      * CPU đọc địa chỉ handler từ Vector Table (ví dụ: 0x0058 cho EXTI0)
+      * Nhảy đến địa chỉ của hàm handler
+      * Thực thi code trong handler:
+        - Kiểm tra pending flag
+        - Thực hiện công việc (ví dụ: đọc input, toggle LED)
+        - Clear pending flag trong EXTI_PR
+      * Quay lại thực thi chương trình chính
+
+   4. Các lưu ý quan trọng:
+      * Xử lý ngắt phải nhanh gọn
+      * Luôn clear pending flag trước khi kết thúc handler
+      * Có thể miss ngắt nếu xử lý quá lâu
+      * Nên có debouncing cho input cơ học
+      * Không nên gọi hàm delay trong handler
 
 ## Tài liệu tham khảo
 
