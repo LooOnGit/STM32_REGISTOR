@@ -1,9 +1,9 @@
-16:38:39 **** Incremental Build of configuration Debug for project STM32F4 ****
+22:22:03 **** Incremental Build of configuration Debug for project STM32F4 ****
 make -j12 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
 ../Core/Src/main.c: In function 'main':
-../Core/Src/main.c:169:10: warning: passing argument 1 of 'memcpy' makes pointer from integer without a cast [-Wint-conversion]
-  169 |   memcpy(0x20000000, 0x00000000, 0x198);
+../Core/Src/main.c:170:10: warning: passing argument 1 of 'memcpy' makes pointer from integer without a cast [-Wint-conversion]
+  170 |   memcpy(0x20000000, 0x00000000, 0x198);
       |          ^~~~~~~~~~
       |          |
       |          int
@@ -11,8 +11,8 @@ In file included from ../Core/Src/main.c:24:
 C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/string.h:31:18: note: expected 'void * restrict' but argument is of type 'int'
    31 | void *   memcpy (void *__restrict, const void *__restrict, size_t);
       |                  ^
-../Core/Src/main.c:169:3: warning: argument 2 null where non-null expected [-Wnonnull]
-  169 |   memcpy(0x20000000, 0x00000000, 0x198);
+../Core/Src/main.c:170:3: warning: argument 2 null where non-null expected [-Wnonnull]
+  170 |   memcpy(0x20000000, 0x00000000, 0x198);
       |   ^~~~~~
 C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/string.h:31:10: note: in a call to function 'memcpy' declared 'nonnull'
    31 | void *   memcpy (void *__restrict, const void *__restrict, size_t);
@@ -24,31 +24,10 @@ arm-none-eabi-size  STM32F4.elf
 arm-none-eabi-objdump -h -S STM32F4.elf  > "STM32F4.list"
 arm-none-eabi-objcopy  -O binary STM32F4.elf  "STM32F4.bin"
    text	   data	    bss	    dec	    hex	filename
-   5320	     12	   1572	   6904	   1af8	STM32F4.elf
+   5332	     12	   1572	   6916	   1b04	STM32F4.elf
 Finished building: default.size.stdout
  
 Finished building: STM32F4.bin
  
 Finished building: STM32F4.list
- 
-16:38:50 **** Incremental Build of configuration Debug for project STM32F4 ****
-make -j12 all 
-arm-none-eabi-size  STM32F4.elf 
-   text	   data	    bss	    dec	    hex	filename
-   5320	     12	   1572	   6904	   1af8	STM32F4.elf
-Finished building: default.size.stdout
- 
-16:40:07 **** Incremental Build of configuration Debug for project STM32F4 ****
-make -j12 all 
-arm-none-eabi-size  STM32F4.elf 
-   text	   data	    bss	    dec	    hex	filename
-   5320	     12	   1572	   6904	   1af8	STM32F4.elf
-Finished building: default.size.stdout
- 
-16:40:21 **** Incremental Build of configuration Debug for project STM32F4 ****
-make -j12 all 
-arm-none-eabi-size  STM32F4.elf 
-   text	   data	    bss	    dec	    hex	filename
-   5320	     12	   1572	   6904	   1af8	STM32F4.elf
-Finished building: default.size.stdout
  

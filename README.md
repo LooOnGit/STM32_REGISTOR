@@ -377,7 +377,9 @@ LoopFillZerobss:
 - Khi chuyển lên RAM thì có trường hợp những biến toàn cục được lưu vào bss(chưa có giá trị ban đầu) hoặc data(không có giá trị ban đầu).
 - Khi khai báo biến toàn cục lỡ nó đụng vào vùng của vector table trên ram làm phá hỏng vector table nên cần set lại vùng nhớ ở file.
 ![alt text](image-5.png)
+![alt text](image-6.png)
 sửa lại chia lại cấp cho VTTB 1Kbyte luôn 1024 = 0x400
+![alt text](image-7.png)
 
 ## Tài liệu tham khảo
 

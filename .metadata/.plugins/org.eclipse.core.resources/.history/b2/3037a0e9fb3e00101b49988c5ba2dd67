@@ -57,7 +57,6 @@ static void MX_GPIO_Init(void);
 #define GPIOA_BASE_ARR 0x40020000
 #define GPIOD_BASE_ARR 0x40020C00
 
-uint32_t global_var = 0;
 void button_init(){
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 
@@ -190,8 +189,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  global_var++;
-	  (void)global_var ;
 	  led_control(1);
 	  HAL_Delay(1000);
 	  led_control(0);
