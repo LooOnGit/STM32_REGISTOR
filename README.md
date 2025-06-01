@@ -373,6 +373,12 @@ LoopFillZerobss:
          * Xử lý các ngoại vi an toàn trước reset
          * Cấu hình watchdog phù hợp để tránh reset ngoài ý muốn
 
+9. Chuyển vector table từ flash (read only lên RAM để ghi được)
+- Khi chuyển lên RAM thì có trường hợp những biến toàn cục được lưu vào bss(chưa có giá trị ban đầu) hoặc data(không có giá trị ban đầu).
+- Khi khai báo biến toàn cục lỡ nó đụng vào vùng của vector table trên ram làm phá hỏng vector table nên cần set lại vùng nhớ ở file.
+![alt text](image-5.png)
+sửa lại chia lại cấp cho VTTB 1Kbyte luôn 1024 = 0x400
+
 ## Tài liệu tham khảo
 
 - [STM32F411xC/E Reference Manual (RM0383)](https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf)  
