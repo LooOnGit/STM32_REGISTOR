@@ -272,8 +272,12 @@ Repository này được tạo ra để học và thực hành lập trình STM3
          ctrl + H search trong cubeide tìm 
          ![alt text](image-4.png)
          thì ra 
-         coi được từ lúc reset chạy những gì
-      ```c
+         coi được từ lúc reset chạy những gì là quá trình boot up 1 con chip  
+         **1.** tạo ra reset interrupt bằng cấp điện hoặc reset
+         **2.** thì nó sẽ nhảy đến vùng nhớ reset trong vector table 
+         **3.** thì lúc nay vùng nhớ này đang chưa địa chỉ hàm reset_handle, hàm này sẽ chạy các thú LoopCopyDataInit,CopyDataInit...  và gọi đến main giống đoạn code dưới
+
+```c
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
@@ -320,7 +324,7 @@ LoopFillZerobss:
   bl  main
   bx  lr    
 .size  Reset_Handler, .-Reset_Handler
-      ```
+```
 
       c. Vector Table sau Reset:
          ```

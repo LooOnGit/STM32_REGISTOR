@@ -1,19 +1,10 @@
-14:53:49 **** Build of configuration Debug for project STM32F4 ****
+16:40:21 **** Incremental Build of configuration Debug for project STM32F4 ****
 make -j12 all 
-arm-none-eabi-gcc -o "STM32F4.elf" @"objects.list"   -mcpu=cortex-m4 -T"E:\Tech\Embedded\STM32_REGISTOR\STM32F4\STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32F4.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: STM32F4.elf
- 
 arm-none-eabi-size  STM32F4.elf 
-arm-none-eabi-objdump -h -S STM32F4.elf  > "STM32F4.list"
-arm-none-eabi-objcopy  -O binary STM32F4.elf  "STM32F4.bin"
    text	   data	    bss	    dec	    hex	filename
-   5040	     12	   1572	   6624	   19e0	STM32F4.elf
+   5320	     12	   1572	   6904	   1af8	STM32F4.elf
 Finished building: default.size.stdout
  
-Finished building: STM32F4.bin
- 
-Finished building: STM32F4.list
- 
 
-14:53:52 Build Finished. 0 errors, 0 warnings. (took 2s.93ms)
+16:40:22 Build Finished. 0 errors, 0 warnings. (took 267ms)
 

@@ -2,7 +2,10 @@
 ../Core/Src/main.c:71:6:read_button_state	1
 ../Core/Src/main.c:76:6:leds_init	1
 ../Core/Src/main.c:90:6:led_control	2
-../Core/Src/main.c:104:5:main	1
-../Core/Src/main.c:152:6:SystemClock_Config	3
-../Core/Src/main.c:194:13:MX_GPIO_Init	1
-../Core/Src/main.c:214:6:Error_Handler	1
+../Core/Src/main.c:99:6:exti0_init	1
+../Core/Src/main.c:111:6:EXTI0_IRQHandler	1
+../Core/Src/main.c:119:6:custom_exti0_handler	1
+../Core/Src/main.c:132:5:main	1
+../Core/Src/main.c:204:6:SystemClock_Config	3
+../Core/Src/main.c:246:13:MX_GPIO_Init	1
+../Core/Src/main.c:266:6:Error_Handler	1

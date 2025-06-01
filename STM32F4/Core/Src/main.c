@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -95,6 +95,34 @@ void led_control(char led_state){
 		*GPIOD_ODR &= ~(1<<12);
 	}
 }
+
+void exti0_init()
+{
+	__HAL_RCC_GPIOD_CLK_ENABLE();
+	uint32_t* EXTI_RTSR = (uint32_t*)(0x40013c00 + 0x08);
+	uint32_t* EXTI_IMR = (uint32_t*)(0x40013c00 + 0x00);
+	*EXTI_RTSR |= (1<<0); //set rising for EXTI0
+	*EXTI_IMR |= (1 << 0); //enable EXTI0
+
+	uint32_t*NVIC_ISER0 = (uint32_t*)(0xe000e100);
+	*NVIC_ISER0 |= (1<<6); //enable interrupt for event in position 6 vector table (EXTI0)
+}
+
+void EXTI0_IRQHandler()
+{
+	__asm("nop");
+
+	uint32_t* EXTI_RR = (uint32_t*)(0x40013c00 + 0x014);
+	*EXTI_RR |= (1<<0); // clear interrupt event flag
+}
+
+void custom_exti0_handler()
+{
+	__asm("nop");
+
+	uint32_t* EXTI_RR = (uint32_t*)(0x40013c00 + 0x014);
+	*EXTI_RR |= (1<<0); // clear interrupt event flag
+}
 /* USER CODE END 0 */
 
 /**
@@ -128,6 +156,30 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
   leds_init();
+  exti0_init();
+  //copy vector table to RAM (start from 0x20000000)
+  //1
+//  uint8_t* ram = (uint8_t*)0x20000000;
+//  uint8_t* vttb = (uint8_t*)0x00000000;
+//  for(int i = 0; i < 0x198; i++){
+//	  ram[i] = vttb[i];
+//  }
+
+  //2
+  memcpy(0x20000000, 0x00000000, 0x198);
+  //talk with arm, when interrupt event goto RAM to find vector table
+  uint32_t* VTOR = (uint32_t*)0xe000ed08;
+  *VTOR = 0x20000000;
+  //when vector table in SRAM
+  uint32_t* function_address = (uint32_t*) 0x20000058;
+  *function_address = (uint32_t) (custom_exti0_handler) | 1;
+
+  //when vector table in flash memory
+
+  //register function handler address into 0x58
+//  uint32_t* function_address = (uint32_t*) 0x58;
+//  *function_address = (uint32_t) (custom_exti0_handler) | 1;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
