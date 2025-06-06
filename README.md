@@ -164,3 +164,6 @@ char UART_NhanKyTu(void) {
     return USART2->DR;
 }
 ```
+
+### Set UART
+![alt text](image.png)
