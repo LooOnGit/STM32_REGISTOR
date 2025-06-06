@@ -124,6 +124,29 @@ void custom_exti0_handler()
 	uint32_t* EXTI_RR = (uint32_t*)(0x40013c00 + 0x014);
 	*EXTI_RR |= (1<<0); // clear interrupt event flag
 }
+
+void UART_init()
+{
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	//set PB6 as UART1_Tx(AF07) and PB7 as UART1_Rx(AF07)
+	uint32_t* MODER = (uint32_t*)(0x40020400); //GPIOB
+	uint32_t* AFRL = (uint32_t*)0x40020420; //alternate function Low
+	//set alternate function mode
+	*MODER &= (0b1111 <<12);
+	*MODER = (0b01 << 12) | (0b10 << 14);
+
+	*AFRL &= ~(0xff << 24);
+	*AFRL |= (7<<24) | (7<<28); //set AF07 for PB6 and PB7
+
+	//UART:
+	//	+ baudrate: 9600
+	//	+frame:
+	//      *data len: 8byte
+	//      *parity (none/odd/even): none
+
+	__HAL_RCC_USART1_CLK_ENABLE();
+
+}
 /* USER CODE END 0 */
 
 /**
