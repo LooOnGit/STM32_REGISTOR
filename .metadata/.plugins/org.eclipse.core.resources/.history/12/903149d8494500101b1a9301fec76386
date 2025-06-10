@@ -264,27 +264,8 @@ void dma2_uart1rx_init()
 	*DMA_S5CR |= (0b100 << 25); // select channel 4 for stream 5
 	*DMA_S5CR |= (0b1 << 10); // enable memory incremen mode
 	*DMA_S5CR |= (0b1 << 8); // enable circular mode
-	*DMA_S5CR |= (0b1 << 4); // enable tranfer complete interrupt
 	*DMA_S5CR |= (0b1 << 0); //enable DMA2 stream 5
 
-	uint32_t* ISER2 = (uint32_t*)(0xE000E108);
-	*ISER2 |= 1 << (68-64);
-}
-
-void dma2_stream5_handler()
-{
-	__asm("NOP");
-	//clear interrupt flag -> transfer complete interrupt
-	uint32_t* HIFCR = (uint32_t*)(DMA2_ADDRESS + 0x0C);
-	*HIFCR |= (1 << 11);
-	if(strstr(*recvData, "LED ON") != NULL)
-	{
-		led_controls(ORANGE_LED, LED_ON);
-	}else if(strstr(*recvData, "LED OFF") != NULL)
-	{
-		led_controls(ORANGE_LED, LED_OFF);
-	}
-	memset(recvData, 0, 7);
 }
 /* USER CODE END 0 */
 
@@ -341,9 +322,6 @@ int main(void)
 
   function_address = (uint32_t*)0x200000D4;
   *function_address = (uint32_t)(uart1_rx_handler) | 1;
-
-  function_address = (uint32_t*)0x20000150;
-  *function_address = (uint32_t)(dma2_stream5_handler) | 1;
   //when vector table in flash memory
 
   //register function handler address into 0x58

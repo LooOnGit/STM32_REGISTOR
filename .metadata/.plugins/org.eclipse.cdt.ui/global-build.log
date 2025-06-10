@@ -1,14 +1,64 @@
-20:55:58 **** Incremental Build of configuration Debug for project STM32F4 ****
+23:12:19 **** Incremental Build of configuration Debug for project STM32F4 ****
 make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'dma2_uart1rx_init':
+../Core/Src/main.c:262:21: warning: assignment to 'uint32_t' {aka 'long unsigned int'} from 'char *' makes integer from pointer without a cast [-Wint-conversion]
+  262 |         *DMA_S5M0AR = recvData;
+      |                     ^
+../Core/Src/main.c: In function 'dma2_stream5_handler':
+../Core/Src/main.c:280:19: warning: passing argument 1 of 'strstr' makes pointer from integer without a cast [-Wint-conversion]
+  280 |         if(strstr(*recvData, "LED ON") != NULL)
+      |                   ^~~~~~~~~
+      |                   |
+      |                   char
+In file included from ../Core/Src/main.c:24:
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/string.h:48:18: note: expected 'const char *' but argument is of type 'char'
+   48 | char    *strstr (const char *, const char *);
+      |                  ^~~~~~~~~~~~
+../Core/Src/main.c:283:25: warning: passing argument 1 of 'strstr' makes pointer from integer without a cast [-Wint-conversion]
+  283 |         }else if(strstr(*recvData, "LED OFF") != NULL)
+      |                         ^~~~~~~~~
+      |                         |
+      |                         char
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/string.h:48:18: note: expected 'const char *' but argument is of type 'char'
+   48 | char    *strstr (const char *, const char *);
+      |                  ^~~~~~~~~~~~
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:334:10: warning: passing argument 1 of 'memcpy' makes pointer from integer without a cast [-Wint-conversion]
+  334 |   memcpy(0x20000000, 0x00000000, 0x198);
+      |          ^~~~~~~~~~
+      |          |
+      |          int
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/string.h:31:18: note: expected 'void * restrict' but argument is of type 'int'
+   31 | void *   memcpy (void *__restrict, const void *__restrict, size_t);
+      |                  ^
+../Core/Src/main.c:334:3: warning: argument 2 null where non-null expected [-Wnonnull]
+  334 |   memcpy(0x20000000, 0x00000000, 0x198);
+      |   ^~~~~~
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/string.h:31:10: note: in a call to function 'memcpy' declared 'nonnull'
+   31 | void *   memcpy (void *__restrict, const void *__restrict, size_t);
+      |          ^~~~~~
+../Core/Src/main.c:352:7: warning: unused variable 'index' [-Wunused-variable]
+  352 |   int index = 0;
+      |       ^~~~~
+arm-none-eabi-gcc -o "STM32F4.elf" @"objects.list"   -mcpu=cortex-m4 -T"E:\Tech\Embedded\STM32_REGISTOR\STM32F4\STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32F4.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: STM32F4.elf
+ 
 arm-none-eabi-size  STM32F4.elf 
+arm-none-eabi-objdump -h -S STM32F4.elf  > "STM32F4.list"
+arm-none-eabi-objcopy  -O binary STM32F4.elf  "STM32F4.bin"
    text	   data	    bss	    dec	    hex	filename
-   5864	     12	   1604	   7480	   1d38	STM32F4.elf
+   6180	     12	   1604	   7796	   1e74	STM32F4.elf
 Finished building: default.size.stdout
  
-20:56:00 **** Incremental Build of configuration Debug for project STM32F4 ****
+Finished building: STM32F4.bin
+ 
+Finished building: STM32F4.list
+ 
+23:12:21 **** Incremental Build of configuration Debug for project STM32F4 ****
 make -j12 all 
 arm-none-eabi-size  STM32F4.elf 
    text	   data	    bss	    dec	    hex	filename
-   5864	     12	   1604	   7480	   1d38	STM32F4.elf
+   6180	     12	   1604	   7796	   1e74	STM32F4.elf
 Finished building: default.size.stdout
  

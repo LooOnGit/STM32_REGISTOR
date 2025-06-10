@@ -277,10 +277,10 @@ void dma2_stream5_handler()
 	//clear interrupt flag -> transfer complete interrupt
 	uint32_t* HIFCR = (uint32_t*)(DMA2_ADDRESS + 0x0C);
 	*HIFCR |= (1 << 11);
-	if(strstr(*recvData, "LED ON") != NULL)
+	if(strstr(*recvData, "LED_ON") != NULL)
 	{
 		led_controls(ORANGE_LED, LED_ON);
-	}else if(strstr(*recvData, "LED OFF") != NULL)
+	}else if(strstr(*recvData, "LED_OFF") != NULL)
 	{
 		led_controls(ORANGE_LED, LED_OFF);
 	}

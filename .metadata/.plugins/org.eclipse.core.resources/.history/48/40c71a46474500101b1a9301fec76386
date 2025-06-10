@@ -57,6 +57,8 @@ static void MX_GPIO_Init(void);
 #define GPIOA_BASE_ARR 0x40020000
 #define GPIOD_BASE_ARR 0x40020C00
 
+uint32_t global_var = 0;
+char recvData[32];
 void button_init(){
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 
@@ -123,6 +125,147 @@ void custom_exti0_handler()
 	uint32_t* EXTI_RR = (uint32_t*)(0x40013c00 + 0x014);
 	*EXTI_RR |= (1<<0); // clear interrupt event flag
 }
+
+void UART_init()
+{
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	//set PB6 as UART1_Tx(AF07) and PB7 as UART1_Rx(AF07)
+	uint32_t* MODER = (uint32_t*)(0x40020400); //GPIOB
+	uint32_t* AFRL = (uint32_t*)(0x40020420); //alternate function Low
+	//set alternate function mode
+	*MODER &= ~(0b1111 << 12);
+	*MODER |= (0b10 << 12) | (0b10 << 14);
+
+	*AFRL &= ~(0xff << 24);
+	*AFRL |= (7<<24) | (7<<28); //set AF07 for PB6 and PB7
+
+	//UART:
+	//	+ baudrate: 9600
+	//	+frame:
+	//      *data len: 8byte
+	//      *parity (none/odd/even): none
+
+	__HAL_RCC_USART1_CLK_ENABLE();
+	uint32_t* BRR = (uint32_t*)(0x40011008);
+	uint32_t* CR1 = (uint32_t*)(0x4001100c);
+	*BRR = (104 << 4) | (3 << 0); 	//set baudrate
+	*CR1 &= ~(1 << 10);			//disable parity
+	*CR1 &= ~(1 << 12);				//set data len as 8bits data
+
+	*CR1 |= (1<<13) | (1 << 2) | (1 << 3);// enable transmiter, receiver, uart enable
+
+#if 0
+	//enable RXNE interrupt -> when RXNE is set, UART1 generate interrupt event send to NVIC
+	*CR1 |= (1 << 5);
+
+	//NVIC accept interrupt event, which is send from UART1
+	uint32_t* ISER1 = (uint32_t*)(0xE000E104);
+	*ISER1 |= 1 << (37 - 32);
+#else
+	//when RXNE is set, send signal to DMA2, DMA2 copy move data to RAM
+	uint32_t* CR3 = (uint32_t*)(0x40011014);
+	*CR3 |= (1<<6);
+#endif
+}
+
+void UART1_Send_1byte(char data)
+{
+	uint32_t* SR = (uint32_t*)(0x40011000);
+	uint32_t* DR = (uint32_t*)(0x40011004);
+	while(((*SR >> 7) & 1) == 0); 	// wait data empty
+	*DR = data;						//write data to DR to UART transfer data (TX: PB6)
+	while(((*SR >> 6) & 1) == 0); 	//wait transmitter of UART1 complete transfer
+	*SR &= ~(1 << 6);				//Clear TC flash
+}
+
+void UART1_Send_String(char* msg)
+{
+	int msg_len = strlen(msg);
+	for(int i = 0; i < msg_len; i++)
+	{
+		UART1_Send_1byte(msg[i]);
+	}
+}
+
+char UART1_Recv_1Byte()
+{
+	uint32_t* SR = (uint32_t*)(0x40011000);
+	uint32_t* DR = (uint32_t*)(0x40011004);
+	while(((*SR >> 5) & 1) == 0); // wait RXNE flag to read recv data
+	char recv_data = *DR;			//read recv data
+	return recv_data;
+}
+
+int rx_index = 0;
+void USART1_IRQHandler()
+{
+	uint32_t* DR = (uint32_t*)(0x40011004);
+	recvData[rx_index++] = *DR;
+}
+
+typedef enum
+{
+	GREEN_LED = 12,
+	ORANGE_LED,
+	RED_LED,
+	BLUE_LED
+}led_num_t;
+
+typedef enum
+{
+	LED_OFF,
+	LED_ON
+}led_state_t;
+
+void led_controls(led_num_t led, led_state_t state)
+{
+	uint32_t* GPIOD_ODR = (uint32_t*)(GPIOD_BASE_ARR + 0x14);
+	if(state == LED_ON)
+		*GPIOD_ODR |= 1 << led;
+	else
+		*GPIOD_ODR &= ~(1<<led);
+}
+
+void uart1_rx_handler()
+{
+	uint32_t* DR = (uint32_t*)(0x40011004);
+	recvData[rx_index++] = *DR;
+	if(strstr(recvData, "LED ON") != NULL)
+	{
+		led_controls(ORANGE_LED, LED_ON);
+		rx_index = 0;
+		memset(recvData, 0, sizeof(recvData));
+	}
+	else if(strstr(recvData, "LED OFF") != NULL)
+	{
+		led_controls(ORANGE_LED, LED_OFF);
+		rx_index = 0;
+		memset(recvData, 0, sizeof(recvData));
+	}
+}
+#define DMA2_ADDRESS 0x40026400
+void dma2_uart1rx_init()
+{
+	__HAL_RCC_DMA2_CLK_ENABLE();
+	//use DMA2 stream 5 channel 4 --> UART1_Rx (DMA mapping tabble)
+	uint32_t* DMA_S5CR = (uint32_t*)(DMA2_ADDRESS + 0x10 + 0x18 * 5);
+	uint32_t* DMA_S5NDTR = (uint32_t*)(DMA2_ADDRESS + 0x14 + 0x18 * 5);
+	uint32_t* DMA_S5PAR = (uint32_t*)(DMA2_ADDRESS + 0x18 + 0x18 * 5);
+	uint32_t* DMA_S5M0AR = (uint32_t*)(DMA2_ADDRESS + 0x1c + 0x18 * 5);
+	/*
+	 * size: 7bytes
+	 * from: UART_DR (0x40011004)
+	 * to: recvData(0x20000428)
+	 */
+	*DMA_S5NDTR = 7;
+	*DMA_S5PAR = 0x40011004;
+	*DMA_S5M0AR_recvData;
+
+	*DMA_S5CR |= (0b100 << 25); // select channel 4 for stream 5
+//	*DMA_S5CR |= (0b1 << 10); // enable memory incremen mode
+	*DMA_S5CR |= (0b1 << 0); //enable DMA2 stream 5
+
+}
 /* USER CODE END 0 */
 
 /**
@@ -157,12 +300,33 @@ int main(void)
   /* USER CODE BEGIN 2 */
   leds_init();
   exti0_init();
+  UART_init();
+  dma2_uart1rx_init();
   //copy vector table to RAM (start from 0x20000000)
+  //1
+//  uint8_t* ram = (uint8_t*)0x20000000;
+//  uint8_t* vttb = (uint8_t*)0x00000000;
+//  for(int i = 0; i < 0x198; i++){
+//	  ram[i] = vttb[i];
+//  }
 
-  //register function handler address into 0x58
-  uint32_t* function_address = (uint32_t*) 0x58;
+  //2
+  memcpy(0x20000000, 0x00000000, 0x198);
+  //talk with arm, when interrupt event goto RAM to find vector table
+  uint32_t* VTOR = (uint32_t*)0xe000ed08;
+  *VTOR = 0x20000000;
+  //when vector table in SRAM
+  uint32_t* function_address = (uint32_t*) 0x20000058;
   *function_address = (uint32_t) (custom_exti0_handler) | 1;
 
+  function_address = (uint32_t*)0x200000D4;
+  *function_address = (uint32_t)(uart1_rx_handler) | 1;
+  //when vector table in flash memory
+
+  //register function handler address into 0x58
+//  uint32_t* function_address = (uint32_t*) 0x58;
+//  *function_address = (uint32_t) (custom_exti0_handler) | 1;
+  int index = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -172,9 +336,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  led_control(1);
+//	  recvData[index++] = UART1_Recv_1Byte();
+//	  global_var++;
+//	  (void)global_var ;
+//	  led_control(1);
+//	  HAL_Delay(1000);
+//	  led_control(0);
+//	  HAL_Delay(1000);
+//	  UART1_Send_1byte('x');
+//	  UART1_Send_String("hello loo\r\n");
+//	  HAL_Delay(1000);
+
+	  //
+	  led_controls(GREEN_LED, LED_ON);
 	  HAL_Delay(1000);
-	  led_control(0);
+	  led_controls(GREEN_LED, LED_OFF);
 	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
