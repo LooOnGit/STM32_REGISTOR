@@ -154,12 +154,18 @@ void UART_init()
 
 	*CR1 |= (1<<13) | (1 << 2) | (1 << 3);// enable transmiter, receiver, uart enable
 
+#if 0
 	//enable RXNE interrupt -> when RXNE is set, UART1 generate interrupt event send to NVIC
 	*CR1 |= (1 << 5);
 
 	//NVIC accept interrupt event, which is send from UART1
 	uint32_t* ISER1 = (uint32_t*)(0xE000E104);
 	*ISER1 |= 1 << (37 - 32);
+#else
+	//when RXNE is set, send signal to DMA2, DMA2 copy move data to RAM
+	uint32_t* CR3 = (uint32_t*)(0x40011014);
+	*CR3 |= (1<<6);
+#endif
 }
 
 void UART1_Send_1byte(char data)
@@ -237,6 +243,49 @@ void uart1_rx_handler()
 		memset(recvData, 0, sizeof(recvData));
 	}
 }
+#define DMA2_ADDRESS 0x40026400
+void dma2_uart1rx_init()
+{
+	__HAL_RCC_DMA2_CLK_ENABLE();
+	//use DMA2 stream 5 channel 4 --> UART1_Rx (DMA mapping tabble)
+	uint32_t* DMA_S5CR = (uint32_t*)(DMA2_ADDRESS + 0x10 + 0x18 * 5);
+	uint32_t* DMA_S5NDTR = (uint32_t*)(DMA2_ADDRESS + 0x14 + 0x18 * 5);
+	uint32_t* DMA_S5PAR = (uint32_t*)(DMA2_ADDRESS + 0x18 + 0x18 * 5);
+	uint32_t* DMA_S5M0AR = (uint32_t*)(DMA2_ADDRESS + 0x1c + 0x18 * 5);
+	/*
+	 * size: 7bytes
+	 * from: UART_DR (0x40011004)
+	 * to: recvData(0x20000428)
+	 */
+	*DMA_S5NDTR = 7;
+	*DMA_S5PAR = 0x40011004;
+	*DMA_S5M0AR = recvData;
+
+	*DMA_S5CR |= (0b100 << 25); // select channel 4 for stream 5
+	*DMA_S5CR |= (0b1 << 10); // enable memory incremen mode
+	*DMA_S5CR |= (0b1 << 8); // enable circular mode
+	*DMA_S5CR |= (0b1 << 4); // enable tranfer complete interrupt
+	*DMA_S5CR |= (0b1 << 0); //enable DMA2 stream 5
+
+	uint32_t* ISER2 = (uint32_t*)(0xE000E108);
+	*ISER2 |= 1 << (68-64);
+}
+
+void dma2_stream5_handler()
+{
+	__asm("NOP");
+	//clear interrupt flag -> transfer complete interrupt
+	uint32_t* HIFCR = (uint32_t*)(DMA2_ADDRESS + 0x0C);
+	*HIFCR |= (1 << 11);
+	if(strstr(*recvData, "LED ON") != NULL)
+	{
+		led_controls(ORANGE_LED, LED_ON);
+	}else if(strstr(*recvData, "LED OFF") != NULL)
+	{
+		led_controls(ORANGE_LED, LED_OFF);
+	}
+	memset(recvData, 0, 7);
+}
 /* USER CODE END 0 */
 
 /**
@@ -272,6 +321,7 @@ int main(void)
   leds_init();
   exti0_init();
   UART_init();
+  dma2_uart1rx_init();
   //copy vector table to RAM (start from 0x20000000)
   //1
 //  uint8_t* ram = (uint8_t*)0x20000000;
@@ -291,6 +341,9 @@ int main(void)
 
   function_address = (uint32_t*)0x200000D4;
   *function_address = (uint32_t)(uart1_rx_handler) | 1;
+
+  function_address = (uint32_t*)0x20000150;
+  *function_address = (uint32_t)(dma2_stream5_handler) | 1;
   //when vector table in flash memory
 
   //register function handler address into 0x58
