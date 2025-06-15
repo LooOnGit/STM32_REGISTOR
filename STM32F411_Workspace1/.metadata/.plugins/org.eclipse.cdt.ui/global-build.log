@@ -1,0 +1,28 @@
+20:59:26 **** Incremental Build of configuration Debug for project FW2_App1 ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:90:8: warning: unused variable 'x' [-Wunused-variable]
+   90 |   char x = version[0];
+      |        ^
+arm-none-eabi-gcc -o "FW2_App1.elf" @"objects.list"   -mcpu=cortex-m4 -T"E:\Tech\Embedded\STM32_REGISTOR\STM32F411_Workspace1\FW2_App1\STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="FW2_App1.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: FW2_App1.elf
+ 
+arm-none-eabi-size  FW2_App1.elf 
+arm-none-eabi-objdump -h -S FW2_App1.elf  > "FW2_App1.list"
+arm-none-eabi-objcopy  -O binary FW2_App1.elf  "FW2_App1.bin"
+   text	   data	    bss	    dec	    hex	filename
+   5784	     16	   1572	   7372	   1ccc	FW2_App1.elf
+Finished building: default.size.stdout
+ 
+Finished building: FW2_App1.bin
+ 
+Finished building: FW2_App1.list
+ 
+20:59:32 **** Incremental Build of configuration Debug for project FW2_App1 ****
+make -j12 all 
+arm-none-eabi-size  FW2_App1.elf 
+   text	   data	    bss	    dec	    hex	filename
+   5784	     16	   1572	   7372	   1ccc	FW2_App1.elf
+Finished building: default.size.stdout
+ 
