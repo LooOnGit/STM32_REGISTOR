@@ -89,3 +89,14 @@ Dự án này là mã nguồn mở và được cung cấp dưới Giấy phép 
 
 ## Sector Erase
 ![alt text](image-8.png)
+xóa sector thì sẽ xóa toàn bộ sector không xóa từng bit được
+
+## Programming
+![alt text](image-9.png)
+
+## Reset control
+![alt text](image-10.png)
+![alt text](image-11.png)
+có thanh ghi 2 có reset system
+![alt text](image-12.png)
+cách mở khóa

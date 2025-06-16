@@ -22,11 +22,19 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include <stdio.h> // Added for sscanf
+#include "stm32f4xx_hal.h" // For HAL_FLASH functions
+#include "stm32f4xx_hal_flash_ex.h" // For HAL_FLASHEx_Erase
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef enum {
+    BOOTLOADER_STATE_IDLE,             // Chờ lệnh "size = ..."
+    BOOTLOADER_STATE_RECEIVING_SIZE,   // Đang nhận chuỗi kích thước
+    BOOTLOADER_STATE_RECEIVING_DATA,   // Đang nhận dữ liệu firmware
+    BOOTLOADER_STATE_UPDATE_COMPLETE   // Cập nhật hoàn tất
+} BootloaderState_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -42,7 +50,14 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+volatile BootloaderState_t bootloaderState = BOOTLOADER_STATE_IDLE;
+uint32_t fw_size = 0; // To store the firmware size
+// You need a buffer large enough to store the entire firmware.
+// The example image shows size = 5784, so allocate at least that much.
+// Consider the maximum expected firmware size for your application.
+#define MAX_FW_SIZE 8000 // Example maximum firmware size, adjust as needed
+uint8_t firmware_buffer[MAX_FW_SIZE]; // Buffer to store received firmware data
+uint32_t firmware_buffer_index = 0; // To track current position in firmware_buffer
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -252,23 +267,25 @@ void dma2_uart1rx_init()
 	uint32_t* DMA_S5NDTR = (uint32_t*)(DMA2_ADDRESS + 0x14 + 0x18 * 5);
 	uint32_t* DMA_S5PAR = (uint32_t*)(DMA2_ADDRESS + 0x18 + 0x18 * 5);
 	uint32_t* DMA_S5M0AR = (uint32_t*)(DMA2_ADDRESS + 0x1c + 0x18 * 5);
-	/*
-	 * size: 7bytes
-	 * from: UART_DR (0x40011004)
-	 * to: recvData(0x20000428)
-	 */
-	*DMA_S5NDTR = 7;
-	*DMA_S5PAR = 0x40011004;
-	*DMA_S5M0AR = recvData;
 
+    // Ban đầu, thiết lập DMA để nhận lệnh "size = %d"
+	*DMA_S5NDTR = sizeof(recvData); // Kích thước buffer cho lệnh kích thước
+	*DMA_S5PAR = 0x40011004;       // Địa chỉ USART1_DR (Peripheral Address)
+	*DMA_S5M0AR = (uint32_t)recvData; // Địa chỉ buffer nhận (Memory Address)
+
+	*DMA_S5CR &= ~(0b1 << 0); // Vô hiệu hóa DMA Stream trước khi cấu hình lại
 	*DMA_S5CR |= (0b100 << 25); // select channel 4 for stream 5
 	*DMA_S5CR |= (0b1 << 10); // enable memory incremen mode
-	*DMA_S5CR |= (0b1 << 8); // enable circular mode
+	*DMA_S5CR |= (0b1 << 8); // enable circular mode (for continuous reception, if needed for commands)
 	*DMA_S5CR |= (0b1 << 4); // enable tranfer complete interrupt
 	*DMA_S5CR |= (0b1 << 0); //enable DMA2 stream 5
-
+	
+	// Enable DMA2 Stream 5 interrupt in NVIC
 	uint32_t* ISER2 = (uint32_t*)(0xE000E108);
 	*ISER2 |= 1 << (68-64);
+
+	// Đặt trạng thái ban đầu
+	bootloaderState = BOOTLOADER_STATE_RECEIVING_SIZE;
 }
 
 void dma2_stream5_handler()
@@ -276,15 +293,212 @@ void dma2_stream5_handler()
 	__asm("NOP");
 	//clear interrupt flag -> transfer complete interrupt
 	uint32_t* HIFCR = (uint32_t*)(DMA2_ADDRESS + 0x0C);
-	*HIFCR |= (1 << 11);
-	if(strstr(*recvData, "LED ON") != NULL)
-	{
-		led_controls(ORANGE_LED, LED_ON);
-	}else if(strstr(*recvData, "LED OFF") != NULL)
-	{
-		led_controls(ORANGE_LED, LED_OFF);
+	*HIFCR |= (1 << 11); // Clear Transfer Complete Flag for Stream 5
+
+	switch (bootloaderState) {
+		case BOOTLOADER_STATE_RECEIVING_SIZE: {
+			int parsed_size = 0;
+			// Ensure recvData is null-terminated for sscanf
+			recvData[sizeof(recvData) - 1] = '\0'; // Safety null termination
+
+			// Example: "size = 5784"
+			if (sscanf((char*)recvData, "size = %d", &parsed_size) == 1) {
+				fw_size = (uint32_t)parsed_size;
+				if (fw_size > MAX_FW_SIZE) {
+					UART1_Send_String("Error: Firmware size too large!\r\n");
+					bootloaderState = BOOTLOADER_STATE_IDLE; // Reset state
+					memset(recvData, 0, sizeof(recvData)); // Clear buffer
+					// Potentially re-enable DMA for size command here if needed
+					return;
+				}
+
+				// Disable DMA Stream 5
+				uint32_t* DMA_S5CR = (uint32_t*)(DMA2_ADDRESS + 0x10 + 0x18 * 5);
+				*DMA_S5CR &= ~(0b1 << 0); // Clear EN bit to disable
+
+				// Reconfigure DMA for firmware data reception
+				uint32_t* DMA_S5NDTR = (uint32_t*)(DMA2_ADDRESS + 0x14 + 0x18 * 5);
+				uint32_t* DMA_S5M0AR = (uint32_t*)(DMA2_ADDRESS + 0x1c + 0x18 * 5);
+
+				*DMA_S5NDTR = fw_size; // Set number of data items to transfer
+				*DMA_S5M0AR = (uint32_t)firmware_buffer; // Set memory address for firmware data
+
+				// Disable circular mode for firmware data transfer (one-shot)
+				*DMA_S5CR &= ~(0b1 << 8);
+
+				// Re-enable DMA Stream 5
+				*DMA_S5CR |= (0b1 << 0); // Set EN bit to enable
+
+				bootloaderState = BOOTLOADER_STATE_RECEIVING_DATA;
+				UART1_Send_String("Please send fw data:\r\n");
+			} else {
+				UART1_Send_String("Error parsing firmware size. Format: size = <num>\r\n");
+				bootloaderState = BOOTLOADER_STATE_IDLE; // Reset state
+				// Re-enable DMA for size command
+				uint32_t* DMA_S5CR = (uint32_t*)(DMA2_ADDRESS + 0x10 + 0x18 * 5);
+				*DMA_S5CR &= ~(0b1 << 0); // Disable first
+				uint32_t* DMA_S5NDTR = (uint32_t*)(DMA2_ADDRESS + 0x14 + 0x18 * 5);
+				*DMA_S5NDTR = sizeof(recvData); // Reset NDTR for size command
+				*DMA_S5CR |= (0b1 << 8); // Re-enable circular mode for size command
+				*DMA_S5CR |= (0b1 << 0); // Re-enable DMA Stream 5
+			}
+			memset(recvData, 0, sizeof(recvData)); // Clear buffer after processing
+			break;
+		}
+
+		case BOOTLOADER_STATE_RECEIVING_DATA: {
+			// In this state, the entire firmware data should have been received
+			// because DMA was configured for a single transfer of fw_size bytes (normal mode).
+			uint32_t* DMA_S5NDTR = (uint32_t*)(DMA2_ADDRESS + 0x14 + 0x18 * 5);
+			if (*DMA_S5NDTR == 0) { // Check if transfer is truly complete (NDTR goes to 0 in normal mode)
+				UART1_Send_String("rec fw finish\r\n");
+				FLASH_Update_Firmware(firmware_buffer, fw_size); // Call the update function
+				bootloaderState = BOOTLOADER_STATE_UPDATE_COMPLETE; // This state implies reset is imminent
+			} else {
+				// This case should ideally not be reached in normal mode.
+				// It might indicate an unexpected DMA behavior or incomplete transfer.
+				UART1_Send_String("Error: Firmware data incomplete or unexpected DMA interrupt.\r\n");
+				bootloaderState = BOOTLOADER_STATE_IDLE; // Reset state
+			}
+			break;
+		}
+
+		case BOOTLOADER_STATE_UPDATE_COMPLETE: {
+			// Firmware update already handled, waiting for reset initiated by FLASH_Update_Firmware.
+			break;
+		}
+
+		case BOOTLOADER_STATE_IDLE: {
+			// This state should only be entered at startup or after an error.
+			// If an interrupt fires here, it's unexpected, just ignore or re-initialize.
+			break;
+		}
 	}
-	memset(recvData, 0, 7);
+}
+
+// Define the start address for your application
+#define FLASH_APP_START_ADDRESS 0x08008000UL // Địa chỉ bắt đầu của ứng dụng mới trong Flash (thường là Sector 2)
+
+// Hàm cập nhật firmware vào bộ nhớ Flash
+void FLASH_Update_Firmware(uint8_t* firmware_data, uint32_t firmware_size) {
+    HAL_StatusTypeDef status;
+    FLASH_EraseInitTypeDef EraseInitStruct;
+    uint32_t SectorError = 0;
+
+    // 1. Mở khóa Flash
+    HAL_FLASH_Unlock();
+
+    // 2. Xóa các sector Flash cần thiết
+    // Bạn phải xóa các sector mà firmware mới sẽ được ghi vào.
+    // Xác định sector bắt đầu và số lượng sector cần xóa dựa trên FLASH_APP_START_ADDRESS và firmware_size.
+    // Đối với STM32F411CEU6 (ví dụ), Sector 2 bắt đầu tại 0x08008000 và có kích thước 16KB (0x4000 byte).
+    // Điều chỉnh các giá trị này dựa trên sơ đồ bộ nhớ Flash cụ thể của vi điều khiển STM32F4xx của bạn.
+    EraseInitStruct.TypeErase     = FLASH_TYPEERASE_SECTORS;
+    EraseInitStruct.VoltageRange  = FLASH_VOLTAGE_RANGE_3; // Tham khảo datasheet thiết bị để chọn dải điện áp phù hợp
+
+    // Tìm sector bắt đầu cho ứng dụng
+    uint32_t startSector = 0;
+    // Các sector điển hình của F411:
+    // Sector 0: 0x08000000 - 0x08003FFF (16KB)
+    // Sector 1: 0x08004000 - 0x08007FFF (16KB)
+    // Sector 2: 0x08008000 - 0x0800BFFF (16KB)
+    // ...
+    // Vì FLASH_APP_START_ADDRESS là 0x08008000, nó là Sector 2.
+    if (FLASH_APP_START_ADDRESS == 0x08000000UL) startSector = FLASH_SECTOR_0;
+    else if (FLASH_APP_START_ADDRESS == 0x08004000UL) startSector = FLASH_SECTOR_1;
+    else if (FLASH_APP_START_ADDRESS == 0x08008000UL) startSector = FLASH_SECTOR_2;
+    else {
+        // Xử lý địa chỉ bắt đầu không xác định hoặc xác định sector động
+        startSector = FLASH_SECTOR_2; // Mặc định là Sector 2 nếu sử dụng 0x08008000
+    }
+    EraseInitStruct.Sector        = startSector;
+
+    // Tính toán số lượng sector dựa trên kích thước firmware.
+    // Giả sử kích thước sector là 16KB (0x4000 byte) cho các sector ban đầu.
+    // Việc tính toán này là đơn giản hóa; một bootloader mạnh mẽ sẽ cần xử lý
+    // các kích thước sector khác nhau tùy thuộc vào dòng STM32F4.
+    uint32_t sector_size_bytes = 16 * 1024; // 16KB
+    uint32_t num_sectors_to_erase = (firmware_size + sector_size_bytes - 1) / sector_size_bytes;
+    if (num_sectors_to_erase == 0) num_sectors_to_erase = 1; // Đảm bảo xóa ít nhất một sector
+
+    EraseInitStruct.NbSectors = num_sectors_to_erase;
+
+    status = HAL_FLASHEx_Erase(&EraseInitStruct, &SectorError);
+
+    if (status != HAL_OK) {
+        // Xử lý lỗi khi xóa Flash
+        UART1_Send_String("Lỗi xóa Flash!
+");
+        HAL_FLASH_Lock();
+        return;
+    }
+
+    // 3. Ghi dữ liệu vào Flash
+    uint32_t current_address = FLASH_APP_START_ADDRESS;
+    for (uint32_t i = 0; i < firmware_size; i++) {
+        // Ghi từng byte
+        status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, current_address, firmware_data[i]);
+        if (status != HAL_OK) {
+            // Xử lý lỗi khi ghi Flash
+            UART1_Send_String("Lỗi ghi Flash tại địa chỉ 0x");
+            char addr_str[10];
+            sprintf(addr_str, "%lx", current_address);
+            UART1_Send_String(addr_str);
+            UART1_Send_String("!
+");
+            HAL_FLASH_Lock();
+            return;
+        }
+        current_address++;
+    }
+
+    // 4. Khóa Flash
+    HAL_FLASH_Lock();
+
+    UART1_Send_String("Cập nhật firmware hoàn tất. Đang reset chip...
+");
+
+    // 5. Nhảy đến ứng dụng mới
+    // Đây là bước quan trọng để bootloader chuyển quyền điều khiển.
+    // Bao gồm:
+    // a. Khử khởi tạo các thiết bị ngoại vi và vô hiệu hóa ngắt được sử dụng bởi bootloader.
+    // b. Đặt con trỏ ngăn xếp (stack pointer) mới.
+    // c. Đặt Thanh ghi Offset Bảng Vector (VTOR) trỏ đến địa chỉ cơ sở của bảng vector của ứng dụng mới.
+    // d. Nhảy đến bộ xử lý Reset (Reset Handler) của ứng dụng mới.
+
+    // Vô hiệu hóa ngắt
+    __disable_irq();
+
+    // Khử khởi tạo tất cả các thiết bị ngoại vi được bật trong bootloader
+    // (Đây là ví dụ đơn giản, bạn có thể cần khử khởi tạo các thiết bị ngoại vi cụ thể như UART, DMA, v.v.)
+    HAL_RCC_DeInit(); // Reset RCC về cấu hình mặc định
+    HAL_DeInit();     // Khử khởi tạo lớp HAL
+
+    // Đặt con trỏ ngăn xếp mới
+    // Từ đầu bảng vector của ứng dụng mới, đọc giá trị đầu tiên (Initial Stack Pointer)
+    uint32_t newStackPointer = *(__IO uint32_t*)FLASH_APP_START_ADDRESS;
+    __set_MSP(newStackPointer); // Hàm CMSIS để đặt Main Stack Pointer
+
+    // Đặt Thanh ghi Offset Bảng Vector (VTOR)
+    // Bảng vector cho ứng dụng mới nằm ở FLASH_APP_START_ADDRESS
+    SCB->VTOR = FLASH_APP_START_ADDRESS;
+
+    // Lấy địa chỉ của bộ xử lý Reset của ứng dụng mới
+    // Từ bảng vector của ứng dụng mới, đọc giá trị thứ hai (Reset Handler)
+    uint32_t newProgramCounter = *(__IO uint32_t*)(FLASH_APP_START_ADDRESS + 4);
+
+    // Đảm bảo bit Thumb được đặt (LSB = 1) cho ARM Cortex-M
+    newProgramCounter |= 1; 
+
+    // Ép kiểu địa chỉ thành con trỏ hàm và nhảy
+    typedef void (*pFunction)(void);
+    pFunction JumpToApplication = (pFunction)newProgramCounter;
+
+    // Nhảy đến ứng dụng mới
+    JumpToApplication();
+
+    // Mã không bao giờ nên đến đây
+    while(1);
 }
 /* USER CODE END 0 */
 
@@ -359,22 +573,20 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//	  recvData[index++] = UART1_Recv_1Byte();
-//	  global_var++;
-//	  (void)global_var ;
-//	  led_control(1);
-//	  HAL_Delay(1000);
-//	  led_control(0);
-//	  HAL_Delay(1000);
-//	  UART1_Send_1byte('x');
-//	  UART1_Send_String("hello loo\r\n");
-//	  HAL_Delay(1000);
+	  // Remove the old LED and UART test code if it's interfering with the bootloader
+	  // This section should ideally be empty or contain only high-level bootloader logic
+	  // or a jump to application if no update is needed.
 
-	  //
-	  led_controls(GREEN_LED, LED_ON);
-	  HAL_Delay(1000);
-	  led_controls(GREEN_LED, LED_OFF);
-	  HAL_Delay(1000);
+	  // Example: If in IDLE state, perhaps blink an LED or wait for commands
+	  if(bootloaderState == BOOTLOADER_STATE_IDLE) {
+		  led_controls(BLUE_LED, LED_ON);
+		  HAL_Delay(500);
+		  led_controls(BLUE_LED, LED_OFF);
+		  HAL_Delay(500);
+	  }
+	  // Once firmware is updated, the chip will reset by FLASH_Update_Firmware
+	  // So this loop won't be executed anymore until the bootloader restarts.
+
   }
   /* USER CODE END 3 */
 }

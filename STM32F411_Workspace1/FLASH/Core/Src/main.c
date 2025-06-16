@@ -54,6 +54,45 @@ static void MX_GPIO_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#define FLASH_ADDR_BASE 0x40023C00
+void Flash_Erase_Sector(char sector)
+{
+	uint32_t* FLASH_SR = (uint32_t*)(FLASH_ADDR_BASE + 0x0C);
+	uint32_t* FLASH_CR = (uint32_t*)(FLASH_ADDR_BASE + 0x10);
+	uint32_t* FLASH_KEYR = (uint32_t*)(FLASH_ADDR_BASE + 0x04);
+	//Check that no Flash memory operation is ongoing. wait BSY
+	while(((*FLASH_SR >> 16) & 1) == 1);
+	if(((*FLASH_CR >> 31) & 1) == 1)
+	{
+		//unlock CR
+		*FLASH_KEYR = 0x45670123;
+		*FLASH_KEYR = 0xCDEF89AB;
+	}
+	*FLASH_CR |= (1 << 1) | (sector << 3);
+	*FLASH_CR |= (1 << 16); //start erase operation
+	while(((*FLASH_SR >> 16) & 1) == 1); //wait BSY is clean
+	*FLASH_CR &= ~(1 << 1);
+}
+
+void Flash_Program(uint8_t* addr, uint8_t value)
+{
+	uint32_t* FLASH_SR = (uint32_t*)(FLASH_ADDR_BASE + 0x0C);
+	uint32_t* FLASH_CR = (uint32_t*)(FLASH_ADDR_BASE + 0x10);
+	uint32_t* FLASH_KEYR = (uint32_t*)(FLASH_ADDR_BASE + 0x04);
+	if(((*FLASH_CR >> 31) & 1) == 1)
+	{
+		//unlock CR
+		*FLASH_KEYR = 0x45670123;
+		*FLASH_KEYR = 0xCDEF89AB;
+	}
+	//Check that no Flash memory operation is ongoing. wait BSY
+	while(((*FLASH_SR >> 16) & 1) == 1);
+	//set the PG bit in the FLASH_CR register
+	*FLASH_CR |= (1 << 0);
+	*addr = value;
+	while(((*FLASH_SR >> 16) & 1) == 1);
+	*FLASH_CR &= ~(1 << 0);
+}
 
 /* USER CODE END 0 */
 
@@ -87,7 +126,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-
+  Flash_Erase_Sector(1);
+  Flash_Program(0x08004000, 0x12);
   /* USER CODE END 2 */
 
   /* Infinite loop */

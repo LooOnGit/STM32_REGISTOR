@@ -87,32 +87,34 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-//  GPIO_PinState button_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+  GPIO_PinState button_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
   uint32_t* ver_num_app1 = 0x08004000;
   uint32_t* ver_num_app2 = 0x08008000;
   void (*con_tro_ham)();//lua dia chi cuar ham reset_handler cua app 1 orr app2
   uint32_t* rst_addr_vttb = 0;
-//  if(button_state == GPIO_PIN_SET)
-//  {
-//	  //todo: execute FW2_App1, jump to reset_handler of app1
-//	  rst_addr_vttb = 0x08004004;
-//  }
-//  else
-//  {
-//	  //todo: excute FW3_App2, jump to reset_handle of app2
-//	  rst_addr_vttb = 0x08008004;
-//  }
-
-  if(*ver_num_app1 > *ver_num_app2)
+  if(button_state == GPIO_PIN_SET)
   {
 	  //todo: execute FW2_App1, jump to reset_handler of app1
-	  rst_addr_vttb = 0x08004404;
+	  rst_addr_vttb = 0x08004004;
   }
   else
   {
-	  //	  //todo: excute FW3_App2, jump to reset_handle of app2
-	  rst_addr_vttb = 0x08008404;
+	  //todo: excute FW3_App2, jump to reset_handle of app2
+	  rst_addr_vttb = 0x08008004;
   }
+
+//  if(*ver_num_app1 > *ver_num_app2)
+//  {
+//	  //todo: execute FW2_App1, jump to reset_handler of app1
+//	  rst_addr_vttb = 0x08004404;
+//  }
+//  else
+//  {
+//	  //	  //todo: excute FW3_App2, jump to reset_handle of app2
+//	  rst_addr_vttb = 0x08008404;
+//  }
+
+
   con_tro_ham = *rst_addr_vttb;
   con_tro_ham();
   /* USER CODE END 2 */
