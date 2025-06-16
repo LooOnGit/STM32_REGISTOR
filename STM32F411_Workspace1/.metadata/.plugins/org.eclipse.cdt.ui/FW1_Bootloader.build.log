@@ -1,10 +1,10 @@
-20:58:38 **** Incremental Build of configuration Debug for project FW1_Bootloader ****
+21:42:47 **** Incremental Build of configuration Debug for project FW1_Bootloader ****
 make -j12 all 
 arm-none-eabi-size  FW1_Bootloader.elf 
    text	   data	    bss	    dec	    hex	filename
-   5620	     12	   1572	   7204	   1c24	FW1_Bootloader.elf
+   5676	     12	   1572	   7260	   1c5c	FW1_Bootloader.elf
 Finished building: default.size.stdout
  
 
-20:58:38 Build Finished. 0 errors, 0 warnings. (took 261ms)
+21:42:48 Build Finished. 0 errors, 0 warnings. (took 252ms)
 

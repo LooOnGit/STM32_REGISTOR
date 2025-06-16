@@ -45,19 +45,12 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 MEMORY
 {
   RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 128K
-  FLASH_VER  (rx)    : ORIGIN = 0x08004000, 	LENGTH = 1K
-  FLASH    (rx)    : ORIGIN = 0x08004400,   LENGTH = 15K
+  FLASH    (rx)    : ORIGIN = 0x08004000,   LENGTH = 16K
 }
 
 /* Sections */
 SECTIONS
 {
-  .version_area :
-  {
-    . = ALIGN(4);
-    *(.ver)
-    . = ALIGN(4);
-  } >FLASH_VER
     /* The startup code into "FLASH" Rom type memory */
   .isr_vector :
   {

@@ -1,178 +1,102 @@
-# STM32 DMA (Direct Memory Access - Truy Cập Bộ Nhớ Trực Tiếp)
+# Thao tác với bộ nhớ FLASH trên STM32
 
-DMA được sử dụng để cung cấp khả năng truyền dữ liệu tốc độ cao giữa các ngoại vi và bộ nhớ, cũng như giữa các vùng nhớ với nhau. Dữ liệu có thể được DMA di chuyển nhanh chóng mà không cần CPU phải can thiệp. Điều này giúp giải phóng tài nguyên CPU để thực hiện các tác vụ khác, từ đó tăng hiệu suất tổng thể của hệ thống.
+## Tổng quan
+Dự án này minh họa cách làm việc với bộ nhớ FLASH trên vi điều khiển STM32. FLASH là bộ nhớ không bay hơi, cho phép lưu trữ dữ liệu ngay cả khi mất điện. Trên STM32, FLASH được tổ chức thành các trang (pages) và mỗi trang có kích thước cố định.
 
-Ví dụ về cách DMA truy cập và chuyển dữ liệu:
+## Cấu trúc bộ nhớ FLASH
+- Bộ nhớ FLASH được chia thành các trang (pages)
+- Mỗi trang có kích thước cố định (thường là 1KB hoặc 2KB tùy model)
+- Địa chỉ FLASH bắt đầu từ 0x08000000
+- Có thể đọc/ghi từng byte, half-word (16-bit) hoặc word (32-bit)
+
+## Tính năng
+- Khởi tạo bộ nhớ FLASH
+- Xóa trang FLASH
+- Thao tác ghi FLASH
+- Thao tác đọc FLASH
+- Xử lý lỗi và xác minh
+
+## Yêu cầu
+- STM32CubeIDE hoặc IDE tương thích
+- Thư viện STM32 HAL
+- Vi điều khiển STM32F4xx hoặc tương thích
+
+## Cách sử dụng
+1. Khởi tạo bộ nhớ FLASH:
+```c
+HAL_FLASH_Unlock();
 ```
-┌───────────────────┐                ┌─────┐                ┌───────────────────┐
-│      UART         │                │     │                │    Biến trong     │
-│    Ngoại vi       │ ───────────>   │ DMA │  ───────────> │       RAM        │
-│ UART_DR: 0x40013804│                │     │                │ Địa chỉ: 0x20000001│
-└───────────────────┘                └─────┘                └───────────────────┘
-                                                            Char var[3] = {0}
-                                                            ┌─────────┐
-                                                            │  Data1  │ var
-                                                            ├─────────┤
-                                                            │  Data2  │ var + 1
-                                                            ├─────────┤
-                                                            │  Data3  │ var + 2
-                                                            └─────────┘
+
+2. Xóa trang FLASH:
+```c
+FLASH_EraseInitTypeDef EraseInitStruct;
+EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+EraseInitStruct.PageAddress = FLASH_PAGE_ADDRESS;
+EraseInitStruct.NbPages = 1;
+HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError);
 ```
 
-DMA sử dụng hai loại địa chỉ chính:
-1. Địa chỉ ngoại vi (Peripheral Address):
-   - Địa chỉ cố định của thanh ghi dữ liệu ngoại vi
-   - Ví dụ: UART_DR tại địa chỉ 0x40013804
+3. Ghi vào FLASH:
+```c
+// Ghi từng word (32-bit)
+HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, data);
 
-2. Địa chỉ bộ nhớ (Memory Address):
-   - Địa chỉ của biến/mảng trong RAM
-   - Ví dụ: Mảng var[3] bắt đầu tại địa chỉ 0x20000001
-   - Có thể tự động tăng để truy cập các phần tử liên tiếp
+// Ghi từng half-word (16-bit)
+HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, address, data);
 
-Repository này tập trung vào việc tìm hiểu và lập trình DMA trên vi điều khiển STM32.
+// Ghi từng byte (8-bit)
+HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, address, data);
+```
 
-## Nội dung
+4. Đọc từ FLASH:
+```c
+// Đọc word (32-bit)
+uint32_t data = *(__IO uint32_t*)address;
 
-1. Tổng quan về DMA
-   - DMA là gì?
-     * Direct Memory Access - Truy cập bộ nhớ trực tiếp
-     * Cho phép chuyển dữ liệu giữa bộ nhớ và ngoại vi mà không cần CPU can thiệp
-     * Giải phóng CPU để thực hiện các tác vụ khác trong khi chuyển dữ liệu
-     * Tăng hiệu suất hệ thống
+// Đọc half-word (16-bit)
+uint16_t data = *(__IO uint16_t*)address;
 
-   - Cơ chế hoạt động
-     * Chuyển dữ liệu từ ngoại vi đến bộ nhớ:
-       ```
-       ┌──────────────┐      DMA      ┌────────────────────┐
-       │    UART      │ ────────────> │ Biến/Mảng trong RAM│
-       │  ngoại vi    │               │     (bộ nhớ)       │
-       └──────────────┘               └────────────────────┘
-       ```
-     * Chuyển dữ liệu giữa các vùng nhớ:
-       ```
-       ┌──────────────┐      DMA      ┌────────────────────┐
-       │ Biến trong   │ ────────────> │ Biến/Mảng trong RAM│
-       │    RAM       │               │     (bộ nhớ)       │
-       └──────────────┘               └────────────────────┘
-       ```
+// Đọc byte (8-bit)
+uint8_t data = *(__IO uint8_t*)address;
+```
 
-   - Cơ chế kích hoạt DMA
-     * Kích hoạt từ phần cứng (Hardware trigger):
-       - Ngoại vi sẽ tự động tạo yêu cầu DMA
-       - Ví dụ: ADC hoàn thành chuyển đổi, UART nhận dữ liệu
-     * Kích hoạt từ phần mềm (Software trigger):
-       - Lập trình viên chủ động tạo yêu cầu DMA
-       - Sử dụng bit MEM2MEM để tạo yêu cầu chuyển dữ liệu
+5. Khóa FLASH:
+```c
+HAL_FLASH_Lock();
+```
 
-   - Ưu điểm của DMA
-     * Giảm tải cho CPU
-     * Tốc độ truyền dữ liệu nhanh hơn
-     * Tiết kiệm năng lượng
-     * Xử lý thời gian thực hiệu quả hơn
+## Lưu ý quan trọng
+- Luôn mở khóa FLASH trước khi thực hiện thao tác
+- Khóa FLASH sau khi thực hiện thao tác
+- Xác minh các thao tác ghi
+- Xử lý lỗi phù hợp
+- Cẩn thận với địa chỉ trang
+- FLASH chỉ có thể ghi từ 1 thành 0, không thể ghi từ 0 thành 1
+- Phải xóa trang trước khi ghi lại
+- Địa chỉ ghi phải được căn chỉnh (aligned) theo kiểu dữ liệu
 
-2. Kiến trúc DMA trong STM32
-   - Bộ điều khiển DMA
-     * Nhiều kênh DMA độc lập
-     * Mỗi kênh có thể cấu hình riêng
-     * Hỗ trợ nhiều chế độ truyền dữ liệu
-     * Các mức ưu tiên cho các kênh
+## Cân nhắc an toàn
+- Sao lưu dữ liệu quan trọng trước khi thực hiện thao tác FLASH
+- Sử dụng kiểm tra lỗi phù hợp
+- Tuân theo hướng dẫn lập trình FLASH của STM32
+- Cân nhắc độ ổn định nguồn trong quá trình thao tác
+- Không thực hiện thao tác FLASH trong các ngắt
+- Đảm bảo không ghi đè lên vùng chứa chương trình
 
-   - Stream và Channel
-     * Stream: Đường dẫn vật lý để truyền dữ liệu
-     * Channel: Kết nối logic giữa ngoại vi và stream
-     * Mỗi stream có thể kết nối với nhiều channel khác nhau
+## Giấy phép
+Dự án này là mã nguồn mở và được cung cấp dưới Giấy phép MIT.
 
-3. Các chế độ truyền DMA
-   - Bộ nhớ đến Bộ nhớ
-     * Chuyển dữ liệu giữa hai vùng nhớ
-     * Tốc độ cao nhất trong các chế độ
-   
-   - Bộ nhớ đến Ngoại vi
-     * Chuyển dữ liệu từ bộ nhớ đến ngoại vi
-     * Ví dụ: Gửi dữ liệu qua UART
-   
-   - Ngoại vi đến Bộ nhớ
-     * Chuyển dữ liệu từ ngoại vi vào bộ nhớ
-     * Ví dụ: Đọc dữ liệu từ ADC
 
-4. Cấu hình DMA
-   a. Bật clock cho DMA
-      * Sử dụng thanh ghi RCC_AHB1ENR
-      * Đặt bit tương ứng với bộ điều khiển DMA
+## Sector Erase
+![alt text](image-8.png)
+xóa sector thì sẽ xóa toàn bộ sector không xóa từng bit được
 
-   b. Cấu hình Stream
-      * Chọn channel phù hợp với ngoại vi
-      * Cấu hình hướng truyền
-      * Đặt địa chỉ nguồn và đích
-      * Cấu hình kích thước dữ liệu
-      * Đặt số lượng dữ liệu cần truyền
+## Programming
+![alt text](image-9.png)
 
-   c. Cấu hình Chế độ
-      * Chế độ thường: Dừng sau khi hoàn thành
-      * Chế độ vòng: Tự động reset và tiếp tục
-      * Chế độ bộ đệm kép: Sử dụng hai bộ đệm luân phiên
-
-   d. Cấu hình Ưu tiên
-      * Thấp, Trung bình, Cao, Rất cao
-      * Quyết định thứ tự ưu tiên giữa các stream
-
-5. Các thanh ghi quan trọng
-   - DMA_SxCR: Cấu hình Stream x
-   - DMA_SxNDTR: Số lượng dữ liệu Stream x
-   - DMA_SxPAR: Địa chỉ ngoại vi Stream x
-   - DMA_SxM0AR: Địa chỉ bộ nhớ 0 Stream x
-   - DMA_SxFCR: Điều khiển FIFO Stream x
-
-6. Xử lý ngắt DMA
-   - Hoàn thành truyền (TC)
-   - Truyền một nửa (HT)
-   - Lỗi truyền (TE)
-   - Lỗi FIFO
-   - Lỗi chế độ trực tiếp
-
-7. Ví dụ thực hành
-   - DMA với ADC
-     * Đọc nhiều kênh ADC liên tục
-     * Lưu vào bộ đệm trong RAM
-     * Sử dụng chế độ vòng
-
-   - DMA với UART
-     * Gửi chuỗi dữ liệu lớn
-     * Không chiếm CPU trong quá trình gửi
-     * Xử lý ngắt khi hoàn thành
-
-8. Lưu ý quan trọng
-   - Đảm bảo căn chỉnh địa chỉ bộ nhớ
-   - Tính toán kích thước FIFO phù hợp
-   - Xử lý xung đột giữa các stream
-   - Xóa cờ sau khi xử lý ngắt
-   - Kiểm tra trạng thái trước khi cấu hình lại
-
-9. Sơ đồ khối DMA
-   ```
-   ┌─────────────────────────────────────────────────────┐
-   │                    STM32 DMA                        │
-   │                                                     │
-   │    Nguồn                Bộ điều khiển       Đích   │
-   │  ┌────────┐             ┌──────────────┐  ┌────────┐
-   │  │Bộ nhớ/ │  ────────>  │   Stream     │  │Bộ nhớ/ │
-   │  │Ngoại vi│    Dữ liệu  │   Channel    │  │Ngoại vi│
-   │  └────────┘             │   FIFO       │  └────────┘
-   │                         └──────────────┘            │
-   │                              │                      │
-   │                              │                      │
-   │                           Ngắt                      │
-   │                              │                      │
-   │                              ▼                      │
-   │                            NVIC                     │
-   └─────────────────────────────────────────────────────┘
-   ```
-
-## Tài liệu tham khảo
-
-- [STM32F411xC/E Reference Manual (RM0383)](https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf)  
-  *Ghi chú: Tài liệu chính để tra cứu chi tiết về thanh ghi và cấu hình DMA*
-
-- [STM32F411xC/E Datasheet](https://www.st.com/resource/en/datasheet/stm32f411ce.pdf)  
-  *Ghi chú: Chứa thông tin về đặc tính và giới hạn của DMA*
-
+## Reset control
+![alt text](image-10.png)
+![alt text](image-11.png)
+có thanh ghi 2 có reset system
+![alt text](image-12.png)
+cách mở khóa

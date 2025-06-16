@@ -1,4 +1,13 @@
-../Core/Src/main.c:64:5:main	1
-../Core/Src/main.c:112:6:SystemClock_Config	3
-../Core/Src/main.c:154:13:MX_GPIO_Init	1
-../Core/Src/main.c:186:6:Error_Handler	1
+../Core/Src/main.c:59:6:UART_init	1
+../Core/Src/main.c:101:6:UART1_Send_1byte	3
+../Core/Src/main.c:111:6:UART1_Send_String	2
+../Core/Src/main.c:120:6:UART1_Recv_1Byte	2
+../Core/Src/main.c:131:6:USART1_rx_hand	1
+../Core/Src/main.c:138:6:dma2_uart1rx_init	1
+../Core/Src/main.c:168:6:DMA2_Stream5_IRQHandler	1
+../Core/Src/main.c:178:6:Flash_Erase_Sector	4
+../Core/Src/main.c:197:6:Flash_Program	4
+../Core/Src/main.c:222:5:main	4
+../Core/Src/main.c:294:6:SystemClock_Config	3
+../Core/Src/main.c:336:13:MX_GPIO_Init	1
+../Core/Src/main.c:368:6:Error_Handler	1

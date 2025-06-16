@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +42,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-__attribute__((section(".ver"))) char version[4] = {1, 2, 3, 6};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -54,7 +53,166 @@ static void MX_GPIO_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+char recvData[16384]; //16KB
+char recv_fw_done_flag = 0;
 
+void UART_init()
+{
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	//set PB6 as UART1_Tx(AF07) and PB7 as UART1_Rx(AF07)
+	uint32_t* MODER = (uint32_t*)(0x40020400); //GPIOB
+	uint32_t* AFRL = (uint32_t*)(0x40020420); //alternate function Low
+	//set alternate function mode
+	*MODER &= ~(0b1111 << 12);
+	*MODER |= (0b10 << 12) | (0b10 << 14);
+
+	*AFRL &= ~(0xff << 24);
+	*AFRL |= (7<<24) | (7<<28); //set AF07 for PB6 and PB7
+
+	//UART:
+	//	+ baudrate: 9600
+	//	+frame:
+	//      *data len: 8byte
+	//      *parity (none/odd/even): none
+
+	__HAL_RCC_USART1_CLK_ENABLE();
+	uint32_t* BRR = (uint32_t*)(0x40011008);
+	uint32_t* CR1 = (uint32_t*)(0x4001100c);
+	*BRR = (104 << 4) | (3 << 0); 	//set baudrate
+	*CR1 &= ~(1 << 10);			//disable parity
+	*CR1 &= ~(1 << 12);				//set data len as 8bits data
+
+	*CR1 |= (1<<13) | (1 << 2) | (1 << 3);// enable transmiter, receiver, uart enable
+
+#if 0
+	//enable RXNE interrupt -> when RXNE is set, UART1 generate interrupt event send to NVIC
+	*CR1 |= (1 << 5);
+
+	//NVIC accept interrupt event, which is send from UART1
+	uint32_t* ISER1 = (uint32_t*)(0xE000E104);
+	*ISER1 |= 1 << (37 - 32);
+#else
+	//when RXNE is set, send signal to DMA2, DMA2 copy move data to RAM
+//	uint32_t* CR3 = (uint32_t*)(0x40011014);
+//	*CR3 |= (1<<6);
+#endif
+}
+
+void UART1_Send_1byte(char data)
+{
+	uint32_t* SR = (uint32_t*)(0x40011000);
+	uint32_t* DR = (uint32_t*)(0x40011004);
+	while(((*SR >> 7) & 1) == 0); 	// wait data empty
+	*DR = data;						//write data to DR to UART transfer data (TX: PB6)
+	while(((*SR >> 6) & 1) == 0); 	//wait transmitter of UART1 complete transfer
+	*SR &= ~(1 << 6);				//Clear TC flash
+}
+
+void UART1_Send_String(char* msg)
+{
+	int msg_len = strlen(msg);
+	for(int i = 0; i < msg_len; i++)
+	{
+		UART1_Send_1byte(msg[i]);
+	}
+}
+
+char UART1_Recv_1Byte()
+{
+	uint32_t* SR = (uint32_t*)(0x40011000);
+	uint32_t* DR = (uint32_t*)(0x40011004);
+	while(((*SR >> 5) & 1) == 0); // wait RXNE flag to read recv data
+	char recv_data = *DR;			//read recv data
+	return recv_data;
+}
+
+int rx_index=0;
+
+void USART1_rx_hand(){
+	uint32_t* DR = (uint32_t*)(0x40011004);
+	recvData[rx_index++] = *DR;
+
+}
+
+#define DMA2_ADDRESS 0x40026400
+void dma2_uart1rx_init(int len)
+{
+	uint32_t* CR3 = (uint32_t*)(0x40011014);
+	*CR3 |= (1 << 6);
+
+	__HAL_RCC_DMA2_CLK_ENABLE();
+	//use DMA2 stream 5 channel 4 --> UART1_Rx (DMA mapping tabble)
+	uint32_t* DMA_S5CR = (uint32_t*)(DMA2_ADDRESS + 0x10 + 0x18 * 5);
+	uint32_t* DMA_S5NDTR = (uint32_t*)(DMA2_ADDRESS + 0x14 + 0x18 * 5);
+	uint32_t* DMA_S5PAR = (uint32_t*)(DMA2_ADDRESS + 0x18 + 0x18 * 5);
+	uint32_t* DMA_S5M0AR = (uint32_t*)(DMA2_ADDRESS + 0x1c + 0x18 * 5);
+	/*
+	 * size: 7bytes
+	 * from: UART_DR (0x40011004)
+	 * to: recvData(0x20000428)
+	 */
+	*DMA_S5NDTR = len;
+	*DMA_S5PAR = 0x40011004;
+	*DMA_S5M0AR = (uint32_t*)recvData;
+
+	*DMA_S5CR |= (0b100 << 25); // select channel 4 for stream 5
+	*DMA_S5CR |= (0b1 << 10); // enable memory incremen mode //mỗi lần nhận dữ liệu thì tăng lên tránh ghi đè
+//	*DMA_S5CR |= (0b1 << 8); // enable circular mode // khi nhận đủ 7 byte thì nó nhận tiếp và bỏ lại vị trí 1 như ring buffer
+//	*DMA_S5CR |= (0b1 << 4); // enable tranfer complete interrupt
+	*DMA_S5CR |= (0b1 << 0); //enable DMA2 stream 5
+
+//	uint32_t* ISER2 = (uint32_t*)(0xE000E108);
+//	*ISER2 |= 1 << (68-64);
+}
+
+void DMA2_Stream5_IRQHandler()
+{
+	__asm("NOP");
+	//clear interrupt flag -> transfer complete interrupt
+	uint32_t* HIFCR = (uint32_t*)(DMA2_ADDRESS + 0x0C);
+	*HIFCR |= (1 << 11);
+
+	recv_fw_done_flag = 1;
+}
+#define FLASH_ADDR_BASE 0x40023C00
+void Flash_Erase_Sector(char sector)
+{
+	uint32_t* FLASH_SR = (uint32_t*)(FLASH_ADDR_BASE + 0x0C);
+	uint32_t* FLASH_CR = (uint32_t*)(FLASH_ADDR_BASE + 0x10);
+	uint32_t* FLASH_KEYR = (uint32_t*)(FLASH_ADDR_BASE + 0x04);
+	//Check that no Flash memory operation is ongoing. wait BSY
+	while(((*FLASH_SR >> 16) & 1) == 1);
+	if(((*FLASH_CR >> 31) & 1) == 1)
+	{
+		//unlock CR
+		*FLASH_KEYR = 0x45670123;
+		*FLASH_KEYR = 0xCDEF89AB;
+	}
+	*FLASH_CR |= (1 << 1) | (sector << 3);
+	*FLASH_CR |= (1 << 16); //start erase operation
+	while(((*FLASH_SR >> 16) & 1) == 1); //wait BSY is clean
+	*FLASH_CR &= ~(1 << 1);
+}
+
+void Flash_Program(uint8_t* addr, uint8_t value)
+{
+	uint32_t* FLASH_SR = (uint32_t*)(FLASH_ADDR_BASE + 0x0C);
+	uint32_t* FLASH_CR = (uint32_t*)(FLASH_ADDR_BASE + 0x10);
+	uint32_t* FLASH_KEYR = (uint32_t*)(FLASH_ADDR_BASE + 0x04);
+	if(((*FLASH_CR >> 31) & 1) == 1)
+	{
+		//unlock CR
+		*FLASH_KEYR = 0x45670123;
+		*FLASH_KEYR = 0xCDEF89AB;
+	}
+	//Check that no Flash memory operation is ongoing. wait BSY
+	while(((*FLASH_SR >> 16) & 1) == 1);
+	//set the PG bit in the FLASH_CR register
+	*FLASH_CR |= (1 << 0);
+	*addr = value;
+	while(((*FLASH_SR >> 16) & 1) == 1);
+	*FLASH_CR &= ~(1 << 0);
+}
 /* USER CODE END 0 */
 
 /**
@@ -87,7 +245,31 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  char x = version[0];
+  UART_init();
+  UART1_Send_String("UPDATE FIRMWARE MODE\r\n");
+  UART1_Send_String("Please send fw size: \r\n");
+  int i = 0;
+  while(strstr(recvData, "\r\n") == NULL)
+  {
+	  recvData[i++] = UART1_Recv_1Byte();
+  }
+  int fw_size = 0;
+  sscanf(recvData, "size = %d", &fw_size);
+  UART1_Send_String("Please send fw data: \r\n");
+  dma2_uart1rx_init(fw_size);
+  uint32_t* DMA_S5NDTR = (uint32_t*)(DMA2_ADDRESS + 0x14 + 0x18*5);
+  while(*DMA_S5NDTR > 0);
+  UART1_Send_String("rec fw finish \r\n");
+  Flash_Erase_Sector(2);
+  for(int i = 0; i < fw_size; i++){
+	  Flash_Program((uint8_t*)(0x08008000+i), recvData[i]);
+  }
+  //RESET CHIP
+  uint32_t* AIRCR = (uint32_t*)0xE000ed0c;
+  *AIRCR = (0x5FA << 16) | (1 << 2);
+
+//  UART1_Send_String("Update complete, please reset chip\r\n");
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -97,10 +279,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
-	  HAL_Delay(1000);
-	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
-	  HAL_Delay(1000);
+//	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+//	  HAL_Delay(1000);
+//	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+//	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
