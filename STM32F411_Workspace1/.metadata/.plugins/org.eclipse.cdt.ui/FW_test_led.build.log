@@ -1,0 +1,19 @@
+21:38:22 **** Incremental Build of configuration Debug for project FW_test_led ****
+make -j12 all 
+arm-none-eabi-gcc -o "FW_test_led.elf" @"objects.list"   -mcpu=cortex-m4 -T"E:\Tech\Embedded\STM32_REGISTOR\STM32F411_Workspace1\FW_test_led\STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="FW_test_led.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: FW_test_led.elf
+ 
+arm-none-eabi-size  FW_test_led.elf 
+arm-none-eabi-objdump -h -S FW_test_led.elf  > "FW_test_led.list"
+arm-none-eabi-objcopy  -O binary FW_test_led.elf  "FW_test_led.bin"
+   text	   data	    bss	    dec	    hex	filename
+   5772	     12	   1572	   7356	   1cbc	FW_test_led.elf
+Finished building: default.size.stdout
+ 
+Finished building: FW_test_led.list
+ 
+Finished building: FW_test_led.bin
+ 
+
+21:38:22 Build Finished. 0 errors, 0 warnings. (took 662ms)
+
