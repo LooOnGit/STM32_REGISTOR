@@ -1,102 +1,246 @@
-# Thao tác với bộ nhớ FLASH trên STM32
+# FUNCTION IN RAM - STM32 Microcontrollers
 
-## Tổng quan
-Dự án này minh họa cách làm việc với bộ nhớ FLASH trên vi điều khiển STM32. FLASH là bộ nhớ không bay hơi, cho phép lưu trữ dữ liệu ngay cả khi mất điện. Trên STM32, FLASH được tổ chức thành các trang (pages) và mỗi trang có kích thước cố định.
+## Tổng quan (Overview)
 
-## Cấu trúc bộ nhớ FLASH
-- Bộ nhớ FLASH được chia thành các trang (pages)
-- Mỗi trang có kích thước cố định (thường là 1KB hoặc 2KB tùy model)
-- Địa chỉ FLASH bắt đầu từ 0x08000000
-- Có thể đọc/ghi từng byte, half-word (16-bit) hoặc word (32-bit)
+**Function in RAM** là một kỹ thuật quan trọng trong lập trình vi điều khiển STM32, cho phép thực thi các hàm từ bộ nhớ RAM thay vì Flash memory. Điều này đặc biệt quan trọng khi thực hiện các thao tác với Flash memory như ghi, xóa, hoặc cấu hình Flash interface.
 
-## Tính năng
-- Khởi tạo bộ nhớ FLASH
-- Xóa trang FLASH
-- Thao tác ghi FLASH
-- Thao tác đọc FLASH
-- Xử lý lỗi và xác minh
+## Tại sao cần Function in RAM? (Why Function in RAM?)
 
-## Yêu cầu
-- STM32CubeIDE hoặc IDE tương thích
-- Thư viện STM32 HAL
-- Vi điều khiển STM32F4xx hoặc tương thích
+### 1. **Vấn đề với Flash Memory**
+- Khi CPU đang thực thi code từ Flash memory, không thể đồng thời thực hiện các thao tác ghi/xóa Flash
+- Việc cố gắng ghi Flash trong khi đang thực thi từ Flash sẽ gây ra lỗi hoặc crash hệ thống
 
-## Cách sử dụng
-1. Khởi tạo bộ nhớ FLASH:
+### 2. **Giải pháp**
+- Di chuyển các hàm cần thiết vào RAM
+- Thực thi các hàm này từ RAM trong khi thao tác với Flash
+- Đảm bảo tính ổn định và an toàn của hệ thống
+
+### Biến toàn cục
+- Biến toàn cục có khởi tạo giá trị ban đầu sẽ được lưu trong flash, khi chạy nó sẽ tạo vùng nhớ trên ram và đưa giá trị lên ram để. Tận dụng điều này để chạy funtion trên ram.
+- Bình thường hàm được lưu ở vùng nhớ text hoặc là code sigment. Mình sẽ đưa nó lên vùng nhó có khởi tạo giá trị ban đầu vùng nhớ data 
+
+### Lưu ý
+- trong HAL_Init() có systick nó sẽ 1ms chạy 1 lần, khi có interrupt nhảy đến Systick_Handler để thực hiện. Trong systick handler có HAL_IncTick để chạy 
+![alt text](image-13.png)
+- Nhưng khi erase thì nó sẽ erase hết khi có sự kiện ngắt xảy ra nó nhảy đến vectortable lock thì nó nhảy tùm bậy làm cho chương trình bị treo.
+- Khi erase flash disable systemtick đi.
+- Khi xóa rồi thì chỉ chạy được hàm trên ram thôi còn dưới flash thì không được.
+
+## Cách triển khai (Implementation)
+
+### 1. **Định nghĩa Macro `__RAM_FUNC`**
+
 ```c
-HAL_FLASH_Unlock();
+// Trong file stm32f4xx_hal_def.h
+#if defined ( __CC_ARM   ) || (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
+/* ARM Compiler V4/V5 and V6 */
+#define __RAM_FUNC
+
+#elif defined ( __ICCARM__ )
+/* ICCARM Compiler */
+#define __RAM_FUNC __ramfunc
+
+#elif defined   (  __GNUC__  )
+/* GNU Compiler */
+#define __RAM_FUNC __attribute__((section(".RamFunc")))
+
+#endif
 ```
 
-2. Xóa trang FLASH:
+### 2. **Các Compiler khác nhau**
+
+#### **ARM Compiler (Keil)**
 ```c
-FLASH_EraseInitTypeDef EraseInitStruct;
-EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
-EraseInitStruct.PageAddress = FLASH_PAGE_ADDRESS;
-EraseInitStruct.NbPages = 1;
-HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError);
+// Sử dụng toolchain options
+// Functions được đặt trong separate source module
+// Sử dụng 'Options for File' dialog để thay đổi 'Code / Const' area
 ```
 
-3. Ghi vào FLASH:
+#### **IAR Compiler**
 ```c
-// Ghi từng word (32-bit)
-HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, data);
-
-// Ghi từng half-word (16-bit)
-HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, address, data);
-
-// Ghi từng byte (8-bit)
-HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, address, data);
+__ramfunc void my_flash_function(void)
+{
+    // Function code here
+}
 ```
 
-4. Đọc từ FLASH:
+#### **GNU Compiler (GCC)**
 ```c
-// Đọc word (32-bit)
-uint32_t data = *(__IO uint32_t*)address;
-
-// Đọc half-word (16-bit)
-uint16_t data = *(__IO uint16_t*)address;
-
-// Đọc byte (8-bit)
-uint8_t data = *(__IO uint8_t*)address;
+__attribute__((section(".RamFunc"))) void my_flash_function(void)
+{
+    // Function code here
+}
 ```
 
-5. Khóa FLASH:
+## Các hàm RAM Function trong STM32F4
+
+### 1. **Flash Interface Control Functions**
+
 ```c
-HAL_FLASH_Lock();
+// Dừng Flash interface trong khi System Run
+__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_StopFlashInterfaceClk(void);
+
+// Khởi động Flash interface trong khi System Run  
+__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_StartFlashInterfaceClk(void);
+
+// Bật Flash sleep mode trong khi System Run
+__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_EnableFlashSleepMode(void);
+
+// Tắt Flash sleep mode trong khi System Run
+__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_DisableFlashSleepMode(void);
 ```
 
-## Lưu ý quan trọng
-- Luôn mở khóa FLASH trước khi thực hiện thao tác
-- Khóa FLASH sau khi thực hiện thao tác
-- Xác minh các thao tác ghi
-- Xử lý lỗi phù hợp
-- Cẩn thận với địa chỉ trang
-- FLASH chỉ có thể ghi từ 1 thành 0, không thể ghi từ 0 thành 1
-- Phải xóa trang trước khi ghi lại
-- Địa chỉ ghi phải được căn chỉnh (aligned) theo kiểu dữ liệu
+### 2. **Ví dụ sử dụng**
 
-## Cân nhắc an toàn
-- Sao lưu dữ liệu quan trọng trước khi thực hiện thao tác FLASH
-- Sử dụng kiểm tra lỗi phù hợp
-- Tuân theo hướng dẫn lập trình FLASH của STM32
-- Cân nhắc độ ổn định nguồn trong quá trình thao tác
-- Không thực hiện thao tác FLASH trong các ngắt
-- Đảm bảo không ghi đè lên vùng chứa chương trình
+```c
+#include "stm32f4xx_hal.h"
 
-## Giấy phép
-Dự án này là mã nguồn mở và được cung cấp dưới Giấy phép MIT.
+void flash_operation_example(void)
+{
+    // Dừng Flash interface
+    HAL_FLASHEx_StopFlashInterfaceClk();
+    
+    // Thực hiện các thao tác với Flash
+    // Ví dụ: ghi, xóa Flash
+    
+    // Khởi động lại Flash interface
+    HAL_FLASHEx_StartFlashInterfaceClk();
+}
+```
 
+## Các thiết bị hỗ trợ (Supported Devices)
 
-## Sector Erase
-![alt text](image-8.png)
-xóa sector thì sẽ xóa toàn bộ sector không xóa từng bit được
+Các hàm RAM function được hỗ trợ trên các thiết bị STM32F4 sau:
+- STM32F410Tx, STM32F410Cx, STM32F410Rx
+- STM32F411xE
+- STM32F446xx
+- STM32F412Zx, STM32F412Vx, STM32F412Rx, STM32F412Cx
 
-## Programming
-![alt text](image-9.png)
+## Linker Script Configuration
 
-## Reset control
-![alt text](image-10.png)
-![alt text](image-11.png)
-có thanh ghi 2 có reset system
-![alt text](image-12.png)
-cách mở khóa
+### 1. **Định nghĩa Section .RamFunc**
+
+```ld
+/* Trong linker script (.ld file) */
+SECTIONS
+{
+    .ramfunc :
+    {
+        . = ALIGN(4);
+        *(.ramfunc)
+        . = ALIGN(4);
+    } >RAM AT> FLASH
+}
+```
+
+### 2. **Copy Section từ Flash sang RAM**
+
+```c
+// Trong startup code
+extern uint32_t _sramfunc, _eramfunc, _sidata;
+
+// Copy RAM functions từ Flash sang RAM
+uint32_t *pSrc = &_sidata;
+uint32_t *pDest = &_sramfunc;
+
+while (pDest < &_eramfunc)
+{
+    *pDest++ = *pSrc++;
+}
+```
+
+## Best Practices
+
+### 1. **Tối ưu hóa kích thước**
+- Chỉ đặt các hàm thực sự cần thiết vào RAM
+- RAM có kích thước hạn chế so với Flash
+
+### 2. **Performance**
+- Các hàm trong RAM thực thi nhanh hơn Flash
+- Tuy nhiên, tốn thêm thời gian copy từ Flash sang RAM
+
+### 3. **Debugging**
+- Các hàm RAM function có thể khó debug hơn
+- Sử dụng breakpoints cẩn thận
+
+## Ví dụ thực tế (Practical Example)
+
+### **Flash Programming với RAM Function**
+
+```c
+#include "stm32f4xx_hal.h"
+
+// RAM function để ghi Flash
+__RAM_FUNC HAL_StatusTypeDef Flash_Program(uint32_t Address, uint32_t Data)
+{
+    FLASH_EraseInitTypeDef EraseInitStruct;
+    uint32_t PAGEError = 0;
+    
+    // Cấu hình erase
+    EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+    EraseInitStruct.PageAddress = Address;
+    EraseInitStruct.NbPages = 1;
+    
+    // Xóa page
+    if (HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+    
+    // Ghi dữ liệu
+    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, Address, Data) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+    
+    return HAL_OK;
+}
+
+// Sử dụng trong main
+int main(void)
+{
+    // Khởi tạo HAL
+    HAL_Init();
+    
+    // Ghi Flash sử dụng RAM function
+    uint32_t address = 0x08008000;
+    uint32_t data = 0x12345678;
+    
+    if (Flash_Program(address, data) == HAL_OK)
+    {
+        // Success
+    }
+    
+    while(1)
+    {
+        // Main loop
+    }
+}
+```
+
+## Troubleshooting
+
+### 1. **Lỗi thường gặp**
+- **Linker Error**: Section .RamFunc không được định nghĩa
+- **Runtime Error**: Hàm không được copy từ Flash sang RAM
+- **Memory Error**: RAM không đủ để chứa các hàm
+
+### 2. **Debugging Tips**
+- Kiểm tra linker script
+- Verify RAM function được copy đúng cách
+- Sử dụng debugger để kiểm tra địa chỉ thực thi
+
+## Kết luận (Conclusion)
+
+Function in RAM là một kỹ thuật quan trọng trong lập trình STM32, đặc biệt khi làm việc với Flash memory. Việc hiểu và triển khai đúng cách sẽ giúp tạo ra các ứng dụng ổn định và an toàn.
+
+---
+
+## Tài liệu tham khảo (References)
+- STM32F4xx HAL Driver Documentation
+- STM32F4xx Reference Manual
+- ARM Cortex-M4 Technical Reference Manual
+
+## Link tham khảo
+- https://developer.arm.com/documentation/dui0474/g/using-scatter-files/using---attribute----section--name-----to-place-code-and-data
+

@@ -1,0 +1,10 @@
+21:37:26 **** Incremental Build of configuration Debug for project FuntionInRam ****
+make -j12 all 
+arm-none-eabi-size  FuntionInRam.elf 
+   text	   data	    bss	    dec	    hex	filename
+   9052	      0	   7720	  16772	   4184	FuntionInRam.elf
+Finished building: default.size.stdout
+ 
+
+21:37:26 Build Finished. 0 errors, 0 warnings. (took 329ms)
+
