@@ -1,10 +1,31 @@
-22:14:18 **** Incremental Build of configuration Debug for project FW2_App1 ****
+22:52:38 **** Incremental Build of configuration Debug for project FW2_App1 ****
 make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'spi_write_data':
+../Core/Src/main.c:178:16: warning: 'return' with a value, in function returning void [-Wreturn-type]
+  178 |         return temp;
+      |                ^~~~
+../Core/Src/main.c:150:6: note: declared here
+  150 | void spi_write_data(char reg, char data)
+      |      ^~~~~~~~~~~~~~
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:270:11: warning: variable 'gyro_id' set but not used [-Wunused-but-set-variable]
+  270 |   uint8_t gyro_id = spi_read_data(WHO_AM_I_REG);
+      |           ^~~~~~~
+arm-none-eabi-gcc -o "FW2_App1.elf" @"objects.list"   -mcpu=cortex-m4 -T"E:\Tech\Embedded\STM32_REGISTOR\STM32F411_Workspace1\FW2_App1\STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="FW2_App1.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: FW2_App1.elf
+ 
 arm-none-eabi-size  FW2_App1.elf 
+arm-none-eabi-objdump -h -S FW2_App1.elf  > "FW2_App1.list"
+arm-none-eabi-objcopy  -O binary FW2_App1.elf  "FW2_App1.bin"
    text	   data	    bss	    dec	    hex	filename
-  10576	     92	  18292	  28960	   7120	FW2_App1.elf
+   6404	     12	   1572	   7988	   1f34	FW2_App1.elf
 Finished building: default.size.stdout
  
+Finished building: FW2_App1.bin
+ 
+Finished building: FW2_App1.list
+ 
 
-22:14:19 Build Finished. 0 errors, 0 warnings. (took 265ms)
+22:52:38 Build Finished. 0 errors, 2 warnings. (took 757ms)
 

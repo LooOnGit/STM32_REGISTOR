@@ -1,40 +1,28 @@
-22:14:16 **** Incremental Build of configuration Debug for project FW2_App1 ****
+22:52:38 **** Incremental Build of configuration Debug for project FW2_App1 ****
 make -j12 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
-../Core/Src/main.c: In function 'dma2_uart1rx_init':
-../Core/Src/main.c:156:21: warning: assignment to 'uint32_t' {aka 'long unsigned int'} from 'uint32_t *' {aka 'long unsigned int *'} makes integer from pointer without a cast [-Wint-conversion]
-  156 |         *DMA_S5M0AR = (uint32_t*)recvData;
-      |                     ^
+../Core/Src/main.c: In function 'spi_write_data':
+../Core/Src/main.c:178:16: warning: 'return' with a value, in function returning void [-Wreturn-type]
+  178 |         return temp;
+      |                ^~~~
+../Core/Src/main.c:150:6: note: declared here
+  150 | void spi_write_data(char reg, char data)
+      |      ^~~~~~~~~~~~~~
 ../Core/Src/main.c: In function 'main':
-../Core/Src/main.c:257:3: warning: implicit declaration of function 'sscanf' [-Wimplicit-function-declaration]
-  257 |   sscanf(recvData, "size = %d", &fw_size);
-      |   ^~~~~~
-../Core/Src/main.c:25:1: note: include '<stdio.h>' or provide a declaration of 'sscanf'
-   24 | #include "string.h"
-  +++ |+#include <stdio.h>
-   25 | /* USER CODE END Includes */
-../Core/Src/main.c:257:3: warning: incompatible implicit declaration of built-in function 'sscanf' [-Wbuiltin-declaration-mismatch]
-  257 |   sscanf(recvData, "size = %d", &fw_size);
-      |   ^~~~~~
-../Core/Src/main.c:257:3: note: include '<stdio.h>' or provide a declaration of 'sscanf'
+../Core/Src/main.c:270:11: warning: variable 'gyro_id' set but not used [-Wunused-but-set-variable]
+  270 |   uint8_t gyro_id = spi_read_data(WHO_AM_I_REG);
+      |           ^~~~~~~
 arm-none-eabi-gcc -o "FW2_App1.elf" @"objects.list"   -mcpu=cortex-m4 -T"E:\Tech\Embedded\STM32_REGISTOR\STM32F411_Workspace1\FW2_App1\STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="FW2_App1.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: FW2_App1.elf
  
 arm-none-eabi-size  FW2_App1.elf 
 arm-none-eabi-objdump -h -S FW2_App1.elf  > "FW2_App1.list"
-   text	   data	    bss	    dec	    hex	filename
-  10576	     92	  18292	  28960	   7120	FW2_App1.elf
 arm-none-eabi-objcopy  -O binary FW2_App1.elf  "FW2_App1.bin"
+   text	   data	    bss	    dec	    hex	filename
+   6404	     12	   1572	   7988	   1f34	FW2_App1.elf
 Finished building: default.size.stdout
  
 Finished building: FW2_App1.bin
+ 
 Finished building: FW2_App1.list
- 
- 
-22:14:18 **** Incremental Build of configuration Debug for project FW2_App1 ****
-make -j12 all 
-arm-none-eabi-size  FW2_App1.elf 
-   text	   data	    bss	    dec	    hex	filename
-  10576	     92	  18292	  28960	   7120	FW2_App1.elf
-Finished building: default.size.stdout
  
