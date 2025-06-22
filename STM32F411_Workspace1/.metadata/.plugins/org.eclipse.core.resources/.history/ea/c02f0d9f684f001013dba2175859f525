@@ -180,9 +180,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  led_controls(BLUE_LED, LED_ON);
-	  tim1_delay(1000);
+	  tim1_delay(2);
 	  led_controls(BLUE_LED, LED_OFF);
-	  tim1_delay(1000);
+	  tim1_delay(2);
   }
   /* USER CODE END 3 */
 }

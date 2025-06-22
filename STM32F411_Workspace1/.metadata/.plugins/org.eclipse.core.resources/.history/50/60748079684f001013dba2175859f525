@@ -107,7 +107,7 @@ void tim1_init()
 
 	*ARR = 1000;
 //	*PSC = 16000 - 1;//sec
-	*PSC = 16 - 1;//msec
+	*PSC = 16 - 1;//sec
 
 	*DIER |= 1<<0; //enable interrupt
 	*CR1 |= 1 << 0;
@@ -180,9 +180,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  led_controls(BLUE_LED, LED_ON);
-	  tim1_delay(1000);
+	  tim1_delay(2);
 	  led_controls(BLUE_LED, LED_OFF);
-	  tim1_delay(1000);
+	  tim1_delay(2);
   }
   /* USER CODE END 3 */
 }

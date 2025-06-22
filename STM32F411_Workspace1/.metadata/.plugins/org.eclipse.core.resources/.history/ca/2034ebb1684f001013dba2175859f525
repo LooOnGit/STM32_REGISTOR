@@ -182,7 +182,7 @@ int main(void)
 	  led_controls(BLUE_LED, LED_ON);
 	  tim1_delay(1000);
 	  led_controls(BLUE_LED, LED_OFF);
-	  tim1_delay(1000);
+	  tim1_delay(100);
   }
   /* USER CODE END 3 */
 }

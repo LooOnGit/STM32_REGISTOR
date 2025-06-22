@@ -31,22 +31,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define GPIOA_BASE_ARR 0x40020000
-#define GPIOD_BASE_ARR 0x40020C00
-
-typedef enum
-{
-	GREEN_LED = 12,
-	ORANGE_LED,
-	RED_LED,
-	BLUE_LED
-}led_num_t;
-
-typedef enum
-{
-	LED_OFF,
-	LED_ON
-}led_state_t;
 
 /* USER CODE END PD */
 
@@ -84,13 +68,13 @@ void leds_init(){
 	*GPIOD_OTYPER &= ~(0b1111 << 12);//set PD12, PD13, PD14, PD15
 }
 
-void led_controls(led_num_t led, led_state_t state)
-{
+void led_control(char led_state){
 	uint32_t* GPIOD_ODR = (uint32_t*)(GPIOD_BASE_ARR + 0x14);
-	if(state == LED_ON)
-		*GPIOD_ODR |= 1 << led;
-	else
-		*GPIOD_ODR &= ~(1<<led);
+	if(led_state == 1){
+		*GPIOD_ODR |= 1 << 12;
+	}else{
+		*GPIOD_ODR &= ~(1<<12);
+	}
 }
 
 void tim1_init()
@@ -100,28 +84,13 @@ void tim1_init()
 	//ARR = 1000
 
 	__HAL_RCC_TIM1_CLK_ENABLE();
-	uint16_t* DIER = (uint16_t*)(0x4001000c);
 	uint16_t* CR1 = (uint16_t*)(0x40010000);
 	uint16_t* ARR = (uint16_t*)(0x4001002c);
 	uint16_t* PSC = (uint16_t*)(0x40010028);
-
 	*ARR = 1000;
-//	*PSC = 16000 - 1;//sec
-	*PSC = 16 - 1;//msec
+	*PSC = 16000 - 1;
 
-	*DIER |= 1<<0; //enable interrupt
 	*CR1 |= 1 << 0;
-
-	uint32_t* ISER0 = (uint32_t*)(0xe000e100);//NVIC
-	*ISER0 |= (1<<25);//enable interrupt time1
-}
-
-uint32_t tim1_cnt = 0;
-void TIM1_UP_TIM10_IRQHandler()
-{
-	uint16_t* SR = (uint16_t*)(0x40010010);
-	*SR &= ~(1 << 0);			//clean UIF flag
-	tim1_cnt++;
 }
 
 void tim1_delay_1sec()
@@ -129,12 +98,6 @@ void tim1_delay_1sec()
 	uint16_t* SR = (uint16_t*)(0x40010010);
 	while(((*SR >> 0)&1) != 1);//wait UIF flag is set to 1
 	*SR &= ~(1 << 0);			//clean UIF flag
-}
-
-void tim1_delay(uint32_t msec)
-{
-	uint32_t currrent_cnt = tim1_cnt;
-	while((uint32_t)(tim1_cnt - currrent_cnt) <  msec);
 }
 /* USER CODE END 0 */
 
@@ -169,7 +132,6 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
   leds_init();
-  tim1_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -180,9 +142,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  led_controls(BLUE_LED, LED_ON);
-	  tim1_delay(1000);
+	  HAL_Delay(500);
 	  led_controls(BLUE_LED, LED_OFF);
-	  tim1_delay(1000);
+	  HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }

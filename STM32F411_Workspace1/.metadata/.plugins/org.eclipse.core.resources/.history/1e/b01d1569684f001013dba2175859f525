@@ -106,8 +106,7 @@ void tim1_init()
 	uint16_t* PSC = (uint16_t*)(0x40010028);
 
 	*ARR = 1000;
-//	*PSC = 16000 - 1;//sec
-	*PSC = 16 - 1;//msec
+	*PSC = 16000 - 1;
 
 	*DIER |= 1<<0; //enable interrupt
 	*CR1 |= 1 << 0;
@@ -131,10 +130,10 @@ void tim1_delay_1sec()
 	*SR &= ~(1 << 0);			//clean UIF flag
 }
 
-void tim1_delay(uint32_t msec)
+void tim1_delay(uint32_t sec)
 {
 	uint32_t currrent_cnt = tim1_cnt;
-	while((uint32_t)(tim1_cnt - currrent_cnt) <  msec);
+	while((uint32_t)(tim1_cnt - currrent_cnt) < sec);
 }
 /* USER CODE END 0 */
 
@@ -180,9 +179,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  led_controls(BLUE_LED, LED_ON);
-	  tim1_delay(1000);
+	  tim1_delay(2);
 	  led_controls(BLUE_LED, LED_OFF);
-	  tim1_delay(1000);
+	  tim1_delay(2);
   }
   /* USER CODE END 3 */
 }
