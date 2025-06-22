@@ -2363,3 +2363,6 @@ java.lang.NullPointerException: Cannot invoke "javax.swing.JTextField.getText()"
 2025-06-22 18:53:14,221 [INFO] ProjectBuilder:5097 - Time for Generating toolchain IDE Files: 1399mS.
 2025-06-22 18:53:14,221 [INFO] ProjectBuilder:3107 - Time for Copy CMSIS : 0mS.
 2025-06-22 18:53:14,223 [INFO] ProjectBuilder:3107 - Time for Copy CMSIS : 0mS.
+2025-06-22 19:16:33,619 [INFO] NvicIntPanel:101 - NVIC parent = com.st.microxplorer.plugins.ip.nvic.MultiNvicIntPanel[,0,0,0x0,invalid,layout=javax.swing.BoxLayout,alignmentX=0.0,alignmentY=0.0,border=,flags=9,maximumSize=,minimumSize=,preferredSize=]
+2025-06-22 19:16:42,019 [INFO] NvicIntPanel:101 - NVIC parent = com.st.microxplorer.plugins.ip.nvic.MultiNvicIntPanel[,0,0,0x0,invalid,layout=javax.swing.BoxLayout,alignmentX=0.0,alignmentY=0.0,border=,flags=9,maximumSize=,minimumSize=,preferredSize=]
+2025-06-22 19:19:53,463 [INFO] UtilMem:75 - End SaveConfig() Used Memory: 835038136 Bytes (1073741824)

@@ -107,6 +107,88 @@ PWM_Frequency = Timer_Clock / (ARR + 1)
 PWM_DutyCycle = (CCRx / (ARR + 1)) * 100%
 ```
 
+## ⏰ SysTick Timer
+
+SysTick là một timer đặc biệt 24-bit được tích hợp trong tất cả các vi điều khiển ARM Cortex-M. Nó thường được sử dụng để tạo ra system tick cho hệ điều hành hoặc tạo độ trễ chính xác.
+
+### Đặc điểm của SysTick:
+- Timer 24-bit đếm xuống
+- 3 nguồn clock có thể chọn:
+  + Processor clock (HCLK)
+  + Processor clock/8
+  + External clock
+- Ngắt tự động khi đếm về 0
+- Tự động nạp lại giá trị từ RELOAD register
+
+### Các thanh ghi SysTick:
+
+| Thanh ghi | Offset | Mô tả |
+|-----------|--------|-------|
+| CTRL | 0xE000E010 | Control and Status Register |
+| LOAD | 0xE000E014 | Reload Value Register |
+| VAL | 0xE000E018 | Current Value Register |
+| CALIB | 0xE000E01C | Calibration Value Register |
+
+### Cấu hình SysTick cơ bản:
+```c
+// Cấu hình SysTick để ngắt mỗi 1ms với HCLK = 16MHz
+void SysTick_Init(void)
+{
+    // Tắt SysTick
+    SysTick->CTRL = 0;
+    
+    // Nạp giá trị RELOAD (16000 - 1 cho 1ms với HCLK = 16MHz)
+    SysTick->LOAD = 16000 - 1;
+    
+    // Reset giá trị hiện tại
+    SysTick->VAL = 0;
+    
+    // Chọn source clock (processor clock)
+    // Enable SysTick interrupt
+    // Enable SysTick counter
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
+                    SysTick_CTRL_TICKINT_Msk |
+                    SysTick_CTRL_ENABLE_Msk;
+}
+
+// Handler cho SysTick interrupt
+void SysTick_Handler(void)
+{
+    // Xử lý ngắt ở đây
+    // Được gọi mỗi 1ms
+}
+```
+
+### Tạo độ trễ với SysTick:
+```c
+void Delay_ms(uint32_t ms)
+{
+    uint32_t start = SysTick->VAL;
+    uint32_t ticks = ms * (SystemCoreClock / 1000);
+    uint32_t elapsed = 0;
+    
+    do {
+        elapsed = start - SysTick->VAL;
+        if (elapsed > ticks)
+            break;
+    } while (1);
+}
+```
+
+### Các bit trong CTRL Register:
+```
+ENABLE    - Enable counter (Bit 0)
+TICKINT   - Enable SysTick interrupt (Bit 1)
+CLKSOURCE - Clock source selection (Bit 2)
+COUNTFLAG - Timer counted to 0 (Bit 16)
+```
+
+### Công thức tính:
+```
+Tick_Period = (RELOAD + 1) / HCLK_Frequency
+Interrupt_Frequency = HCLK_Frequency / (RELOAD + 1)
+```
+
 ## 🎯 Tips và Debug
 
 ### Các lỗi thường gặp:
