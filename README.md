@@ -40,8 +40,10 @@ Timer là một phần cứng quan trọng trong STM32, được sử dụng đ�
 ### Cách tính thời gian với Prescaler:
 
 Timer sử dụng 2 thành phần chính để tạo thời gian:
-1. CNT (set trong TIMx_ARR - auto-reload)
-2. Tcnt (set trong TIMx_PSC - pre-scaler)
+1. CNT (set trong TIMx_ARR - auto-reload) = 1000 (< 65535)
+2. Tcnt (set trong TIMx_PSC - pre-scaler) = 16000 (< 65535)
+
+Lưu ý: Cả CNT và Tcnt đều là thanh ghi 16-bit nên giá trị tối đa là 65535.
 
 Công thức tính:
 ```
@@ -94,139 +96,6 @@ DIR  - Direction (Bit 4)
 CMS  - Center-aligned Mode (Bits 5-6)
 ARPE - Auto-reload Preload Enable (Bit 7)
 CKD  - Clock Division (Bits 8-9)
-```
-
-## ⚙️ Cấu hình Timer (Register Level)
-
-### 1. Khởi tạo Timer cơ bản
-```c
-// Enable Timer2 clock in RCC
-RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-
-// Configure Timer2
-TIM2->PSC = 83;        // Prescaler = 84MHz/84 = 1MHz
-TIM2->ARR = 999;       // Auto-reload = 1MHz/1000 = 1kHz
-TIM2->CR1 = 0;         // Reset CR1
-TIM2->CR1 |= TIM_CR1_CEN;  // Enable counter
-```
-
-### 2. Cấu hình ngắt Timer
-```c
-void Timer2_Init_IT(void)
-{
-    // Enable Timer2 clock
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-    
-    // Configure Timer
-    TIM2->PSC = 83;    // 1MHz
-    TIM2->ARR = 999;   // 1kHz
-    
-    // Enable update interrupt
-    TIM2->DIER |= TIM_DIER_UIE;
-    
-    // Enable Timer2 interrupt in NVIC
-    NVIC_EnableIRQ(TIM2_IRQn);
-    
-    // Start timer
-    TIM2->CR1 |= TIM_CR1_CEN;
-}
-
-void TIM2_IRQHandler(void)
-{
-    if(TIM2->SR & TIM_SR_UIF)
-    {
-        TIM2->SR &= ~TIM_SR_UIF;  // Clear flag
-        // Xử lý ngắt ở đây
-    }
-}
-```
-
-### 3. Cấu hình PWM
-```c
-void PWM_Init(void)
-{
-    // Enable Timer2 and GPIOA clocks
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-    
-    // Configure PA5 as alternate function (Timer2 CH1)
-    GPIOA->MODER &= ~GPIO_MODER_MODER5;
-    GPIOA->MODER |= GPIO_MODER_MODER5_1;  // Alternate function
-    GPIOA->AFR[0] |= (1 << 20);           // AF1 for Timer2
-    
-    // Configure Timer2 for PWM
-    TIM2->PSC = 83;    // 1MHz
-    TIM2->ARR = 999;   // 1kHz PWM frequency
-    
-    // Configure Channel 1 as PWM
-    TIM2->CCMR1 &= ~TIM_CCMR1_OC1M;
-    TIM2->CCMR1 |= TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2;  // PWM Mode 1
-    TIM2->CCMR1 |= TIM_CCMR1_OC1PE;  // Preload enable
-    
-    TIM2->CCR1 = 499;  // 50% duty cycle
-    
-    TIM2->CCER |= TIM_CCER_CC1E;  // Enable channel 1 output
-    TIM2->CR1 |= TIM_CR1_CEN;     // Enable counter
-}
-
-// Thay đổi Duty Cycle (0-100%)
-void PWM_SetDuty(uint8_t duty)
-{
-    if(duty <= 100)
-    {
-        TIM2->CCR1 = (TIM2->ARR + 1) * duty / 100;
-    }
-}
-```
-
-### 4. Input Capture
-```c
-void InputCapture_Init(void)
-{
-    // Enable Timer2 and GPIOA clocks
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-    
-    // Configure PA0 as alternate function
-    GPIOA->MODER &= ~GPIO_MODER_MODER0;
-    GPIOA->MODER |= GPIO_MODER_MODER0_1;
-    GPIOA->AFR[0] |= (1 << 0);
-    
-    // Configure Timer2 Channel 1 for input capture
-    TIM2->PSC = 83;    // 1MHz
-    
-    TIM2->CCMR1 &= ~TIM_CCMR1_CC1S;
-    TIM2->CCMR1 |= TIM_CCMR1_CC1S_0;  // CC1 channel as input
-    
-    TIM2->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC1NP);  // Rising edge
-    TIM2->CCER |= TIM_CCER_CC1E;  // Enable capture
-    
-    TIM2->CR1 |= TIM_CR1_CEN;     // Enable counter
-}
-
-uint32_t IC_GetValue(void)
-{
-    return TIM2->CCR1;
-}
-```
-
-## 🔍 Các chế độ đếm
-
-### 1. Up-counting mode
-```c
-TIM2->CR1 &= ~(TIM_CR1_DIR | TIM_CR1_CMS);  // Up counting
-```
-
-### 2. Down-counting mode
-```c
-TIM2->CR1 |= TIM_CR1_DIR;
-TIM2->CR1 &= ~TIM_CR1_CMS;
-```
-
-### 3. Center-aligned mode
-```c
-TIM2->CR1 &= ~TIM_CR1_DIR;
-TIM2->CR1 |= TIM_CR1_CMS_0;  // Center-aligned mode 1
 ```
 
 ## 📊 Công thức tính toán
