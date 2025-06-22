@@ -12,3 +12,4 @@ org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:FW2_App1/activeLaunchTarget=nul
 org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:FW3_App2/activeLaunchMode=run
 org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:FW3_App2/activeLaunchTarget=null\:---
 org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:FuntionInRam\ Debug/activeLaunchMode=run
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:FuntionInRam\ Debug/activeLaunchTarget=null\:---

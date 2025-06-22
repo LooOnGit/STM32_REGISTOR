@@ -1,246 +1,140 @@
-# FUNCTION IN RAM - STM32 Microcontrollers
+# Hướng dẫn Timer PWM trên STM32
 
-## Tổng quan (Overview)
+## Tổng quan
+Repository này chứa các ví dụ và tài liệu hướng dẫn thực hiện Timer PWM (Pulse Width Modulation) trên vi điều khiển STM32F411 dựa trên bài giảng từ [Video Timer PWM STM32](https://www.youtube.com/watch?v=fZgGG5vrTno&list=PLeF_iec1JSb6FLu07L6uAleGYWszlG1rY&index=12).
 
-**Function in RAM** là một kỹ thuật quan trọng trong lập trình vi điều khiển STM32, cho phép thực thi các hàm từ bộ nhớ RAM thay vì Flash memory. Điều này đặc biệt quan trọng khi thực hiện các thao tác với Flash memory như ghi, xóa, hoặc cấu hình Flash interface.
+## PWM là gì?
+Pulse Width Modulation (PWM) là kỹ thuật được sử dụng để điều khiển công suất trung bình cung cấp cho tải bằng cách chuyển đổi nhanh tín hiệu giữa trạng thái cao và thấp. Các tham số chính của PWM bao gồm:
 
-## Tại sao cần Function in RAM? (Why Function in RAM?)
+- **Tần số**: Tốc độ chuyển đổi tín hiệu (Hz)
+- **Chu kỳ làm việc (Duty Cycle)**: Phần trăm thời gian tín hiệu ở mức cao
+- **Chu kỳ (Period)**: Tổng thời gian cho một chu kỳ hoàn chỉnh
+- **Độ rộng xung (Pulse Width)**: Thời gian tín hiệu duy trì ở mức cao
 
-### 1. **Vấn đề với Flash Memory**
-- Khi CPU đang thực thi code từ Flash memory, không thể đồng thời thực hiện các thao tác ghi/xóa Flash
-- Việc cố gắng ghi Flash trong khi đang thực thi từ Flash sẽ gây ra lỗi hoặc crash hệ thống
+## Lý thuyết Timer PWM
 
-### 2. **Giải pháp**
-- Di chuyển các hàm cần thiết vào RAM
-- Thực thi các hàm này từ RAM trong khi thao tác với Flash
-- Đảm bảo tính ổn định và an toàn của hệ thống
+### Khái niệm cơ bản
+1. **Bộ đếm Timer**: Đếm từ 0 đến giá trị Auto-Reload Register (ARR)
+2. **Thanh ghi so sánh (CCR)**: Xác định khi nào đầu ra nên chuyển đổi
+3. **Chế độ PWM**: Timer tự động chuyển đổi đầu ra dựa trên giá trị bộ đếm
 
-### Biến toàn cục
-- Biến toàn cục có khởi tạo giá trị ban đầu sẽ được lưu trong flash, khi chạy nó sẽ tạo vùng nhớ trên ram và đưa giá trị lên ram để. Tận dụng điều này để chạy funtion trên ram.
-- Bình thường hàm được lưu ở vùng nhớ text hoặc là code sigment. Mình sẽ đưa nó lên vùng nhó có khởi tạo giá trị ban đầu vùng nhớ data 
+### Các tham số PWM
+- **Chu kỳ** = (ARR + 1) / Tần số đồng hồ Timer
+- **Chu kỳ làm việc** = (CCR / (ARR + 1)) × 100%
+- **Tần số** = Tần số đồng hồ Timer / (ARR + 1)
 
-### Lưu ý
-- trong HAL_Init() có systick nó sẽ 1ms chạy 1 lần, khi có interrupt nhảy đến Systick_Handler để thực hiện. Trong systick handler có HAL_IncTick để chạy 
-![alt text](image-13.png)
-- Nhưng khi erase thì nó sẽ erase hết khi có sự kiện ngắt xảy ra nó nhảy đến vectortable lock thì nó nhảy tùm bậy làm cho chương trình bị treo.
-- Khi erase flash disable systemtick đi.
-- Khi xóa rồi thì chỉ chạy được hàm trên ram thôi còn dưới flash thì không được.
+## Thực hiện Timer PWM trên STM32
 
-## Cách triển khai (Implementation)
+### Cấu hình phần cứng
+- **Timer**: TIM2, TIM3, TIM4, hoặc TIM5 (Timer đa năng)
+- **Kênh**: Bất kỳ 1 trong 4 kênh của mỗi timer
+- **Chế độ**: PWM Mode 1 hoặc PWM Mode 2
+- **Đầu ra**: Chân GPIO được cấu hình làm chức năng thay thế
 
-### 1. **Định nghĩa Macro `__RAM_FUNC`**
+### Các thanh ghi quan trọng
+1. **TIMx_CR1**: Thanh ghi điều khiển Timer
+2. **TIMx_ARR**: Thanh ghi tự động tải lại (Chu kỳ)
+3. **TIMx_CCRx**: Thanh ghi bắt/so sánh (Chu kỳ làm việc)
+4. **TIMx_CCMRx**: Thanh ghi chế độ bắt/so sánh
+5. **TIMx_CCER**: Thanh ghi bật bắt/so sánh
 
+### Các bước cấu hình
+1. Bật đồng hồ timer
+2. Cấu hình chân GPIO làm chức năng thay thế
+3. Đặt prescaler và ARR cho tần số mong muốn
+4. Cấu hình chế độ PWM trong thanh ghi CCMR
+5. Đặt giá trị CCR cho chu kỳ làm việc mong muốn
+6. Bật timer và đầu ra PWM
+
+## Ví dụ mã nguồn
+
+### Thiết lập PWM cơ bản
 ```c
-// Trong file stm32f4xx_hal_def.h
-#if defined ( __CC_ARM   ) || (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
-/* ARM Compiler V4/V5 and V6 */
-#define __RAM_FUNC
-
-#elif defined ( __ICCARM__ )
-/* ICCARM Compiler */
-#define __RAM_FUNC __ramfunc
-
-#elif defined   (  __GNUC__  )
-/* GNU Compiler */
-#define __RAM_FUNC __attribute__((section(".RamFunc")))
-
-#endif
-```
-
-### 2. **Các Compiler khác nhau**
-
-#### **ARM Compiler (Keil)**
-```c
-// Sử dụng toolchain options
-// Functions được đặt trong separate source module
-// Sử dụng 'Options for File' dialog để thay đổi 'Code / Const' area
-```
-
-#### **IAR Compiler**
-```c
-__ramfunc void my_flash_function(void)
+// Cấu hình Timer PWM
+void Timer_PWM_Init(void)
 {
-    // Function code here
+    // Bật đồng hồ timer
+    __HAL_RCC_TIM2_CLK_ENABLE();
+    
+    // Cấu hình timer
+    htim2.Instance = TIM2;
+    htim2.Init.Prescaler = 83;  // 84MHz / 84 = 1MHz
+    htim2.Init.Period = 999;    // 1MHz / 1000 = 1kHz
+    htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    
+    HAL_TIM_Base_Init(&htim2);
+    
+    // Cấu hình PWM
+    sConfigOC.OCMode = TIM_OCMODE_PWM1;
+    sConfigOC.Pulse = 500;  // 50% chu kỳ làm việc
+    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+    
+    HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1);
+    
+    // Khởi động PWM
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 }
 ```
 
-#### **GNU Compiler (GCC)**
+### Điều khiển chu kỳ làm việc thay đổi
 ```c
-__attribute__((section(".RamFunc"))) void my_flash_function(void)
+// Thay đổi chu kỳ làm việc động
+void PWM_SetDutyCycle(uint16_t duty_cycle)
 {
-    // Function code here
+    uint16_t ccr_value = (duty_cycle * (htim2.Init.Period + 1)) / 100;
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, ccr_value);
 }
 ```
 
-## Các hàm RAM Function trong STM32F4
+## Ứng dụng
 
-### 1. **Flash Interface Control Functions**
+### Điều khiển độ sáng LED
+- Sử dụng PWM để điều khiển độ sáng LED
+- Chu kỳ làm việc quyết định độ sáng cảm nhận
+- Tần số nên > 100Hz để tránh nhấp nháy
 
-```c
-// Dừng Flash interface trong khi System Run
-__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_StopFlashInterfaceClk(void);
+### Điều khiển tốc độ động cơ
+- PWM điều khiển tốc độ động cơ
+- Chu kỳ làm việc cao hơn = động cơ nhanh hơn
+- Tần số ảnh hưởng đến hành vi động cơ
 
-// Khởi động Flash interface trong khi System Run  
-__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_StartFlashInterfaceClk(void);
+### Điều khiển servo
+- Độ rộng xung PWM điều khiển vị trí servo
+- Phạm vi điển hình: 1ms đến 2ms độ rộng xung
+- Tần số: 50Hz (chu kỳ 20ms)
 
-// Bật Flash sleep mode trong khi System Run
-__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_EnableFlashSleepMode(void);
-
-// Tắt Flash sleep mode trong khi System Run
-__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_DisableFlashSleepMode(void);
+## Cấu trúc dự án
+```
+STM32_REGISTOR/
+├── STM32F4/                    # Dự án STM32F4 chính
+├── STM32F411_Workspace1/       # Workspace với nhiều dự án
+│   ├── FLASH/                  # Dự án dựa trên Flash
+│   ├── FuntionInRam/           # Dự án dựa trên RAM
+│   ├── FW_test_led/            # Firmware test LED
+│   ├── FW1_Bootloader/         # Firmware bootloader
+│   ├── FW2_App1/               # Ứng dụng 1
+│   └── FW3_App2/               # Ứng dụng 2
+└── Documents/                  # Tài liệu STM32
 ```
 
-### 2. **Ví dụ sử dụng**
+## Yêu cầu phần cứng
+- Board phát triển STM32F411VET6
+- LED để test (tùy chọn)
+- Dao động kế để phân tích dạng sóng (tùy chọn)
+- Động cơ hoặc servo cho ứng dụng thực tế (tùy chọn)
 
-```c
-#include "stm32f4xx_hal.h"
+## Yêu cầu phần mềm
+- STM32CubeIDE hoặc IDE tương tự
+- Thư viện STM32 HAL
+- STM32CubeMX để cấu hình (tùy chọn)
 
-void flash_operation_example(void)
-{
-    // Dừng Flash interface
-    HAL_FLASHEx_StopFlashInterfaceClk();
-    
-    // Thực hiện các thao tác với Flash
-    // Ví dụ: ghi, xóa Flash
-    
-    // Khởi động lại Flash interface
-    HAL_FLASHEx_StartFlashInterfaceClk();
-}
-```
+## Tài liệu tham khảo
+- [Video hướng dẫn Timer PWM STM32](https://www.youtube.com/watch?v=fZgGG5vrTno&list=PLeF_iec1JSb6FLu07L6uAleGYWszlG1rY&index=12)
+- Sổ tay tham khảo STM32F411 (RM0383)
+- Sổ tay lập trình STM32F4 (PM0214)
 
-## Các thiết bị hỗ trợ (Supported Devices)
-
-Các hàm RAM function được hỗ trợ trên các thiết bị STM32F4 sau:
-- STM32F410Tx, STM32F410Cx, STM32F410Rx
-- STM32F411xE
-- STM32F446xx
-- STM32F412Zx, STM32F412Vx, STM32F412Rx, STM32F412Cx
-
-## Linker Script Configuration
-
-### 1. **Định nghĩa Section .RamFunc**
-
-```ld
-/* Trong linker script (.ld file) */
-SECTIONS
-{
-    .ramfunc :
-    {
-        . = ALIGN(4);
-        *(.ramfunc)
-        . = ALIGN(4);
-    } >RAM AT> FLASH
-}
-```
-
-### 2. **Copy Section từ Flash sang RAM**
-
-```c
-// Trong startup code
-extern uint32_t _sramfunc, _eramfunc, _sidata;
-
-// Copy RAM functions từ Flash sang RAM
-uint32_t *pSrc = &_sidata;
-uint32_t *pDest = &_sramfunc;
-
-while (pDest < &_eramfunc)
-{
-    *pDest++ = *pSrc++;
-}
-```
-
-## Best Practices
-
-### 1. **Tối ưu hóa kích thước**
-- Chỉ đặt các hàm thực sự cần thiết vào RAM
-- RAM có kích thước hạn chế so với Flash
-
-### 2. **Performance**
-- Các hàm trong RAM thực thi nhanh hơn Flash
-- Tuy nhiên, tốn thêm thời gian copy từ Flash sang RAM
-
-### 3. **Debugging**
-- Các hàm RAM function có thể khó debug hơn
-- Sử dụng breakpoints cẩn thận
-
-## Ví dụ thực tế (Practical Example)
-
-### **Flash Programming với RAM Function**
-
-```c
-#include "stm32f4xx_hal.h"
-
-// RAM function để ghi Flash
-__RAM_FUNC HAL_StatusTypeDef Flash_Program(uint32_t Address, uint32_t Data)
-{
-    FLASH_EraseInitTypeDef EraseInitStruct;
-    uint32_t PAGEError = 0;
-    
-    // Cấu hình erase
-    EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
-    EraseInitStruct.PageAddress = Address;
-    EraseInitStruct.NbPages = 1;
-    
-    // Xóa page
-    if (HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError) != HAL_OK)
-    {
-        return HAL_ERROR;
-    }
-    
-    // Ghi dữ liệu
-    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, Address, Data) != HAL_OK)
-    {
-        return HAL_ERROR;
-    }
-    
-    return HAL_OK;
-}
-
-// Sử dụng trong main
-int main(void)
-{
-    // Khởi tạo HAL
-    HAL_Init();
-    
-    // Ghi Flash sử dụng RAM function
-    uint32_t address = 0x08008000;
-    uint32_t data = 0x12345678;
-    
-    if (Flash_Program(address, data) == HAL_OK)
-    {
-        // Success
-    }
-    
-    while(1)
-    {
-        // Main loop
-    }
-}
-```
-
-## Troubleshooting
-
-### 1. **Lỗi thường gặp**
-- **Linker Error**: Section .RamFunc không được định nghĩa
-- **Runtime Error**: Hàm không được copy từ Flash sang RAM
-- **Memory Error**: RAM không đủ để chứa các hàm
-
-### 2. **Debugging Tips**
-- Kiểm tra linker script
-- Verify RAM function được copy đúng cách
-- Sử dụng debugger để kiểm tra địa chỉ thực thi
-
-## Kết luận (Conclusion)
-
-Function in RAM là một kỹ thuật quan trọng trong lập trình STM32, đặc biệt khi làm việc với Flash memory. Việc hiểu và triển khai đúng cách sẽ giúp tạo ra các ứng dụng ổn định và an toàn.
-
----
-
-## Tài liệu tham khảo (References)
-- STM32F4xx HAL Driver Documentation
-- STM32F4xx Reference Manual
-- ARM Cortex-M4 Technical Reference Manual
-
-## Link tham khảo
-- https://developer.arm.com/documentation/dui0474/g/using-scatter-files/using---attribute----section--name-----to-place-code-and-data
-
+## Giấy phép
+Dự án này dành cho mục đích giáo dục. Hãy tự do sử dụng và chỉnh sửa mã nguồn cho các dự án của riêng bạn.
