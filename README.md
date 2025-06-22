@@ -177,3 +177,47 @@ Dự án này được phát triển cho mục đích giáo dục. Bạn có th�
 <div align="center">
   <i>Developed with ❤️ for STM32 Community</i>
 </div>
+
+### 📊 Giải thích sóng PWM
+
+```
+    ARR = 1000                PSC = 1ms
+    CCR = 500                 
+                                   
+    1      ┌────┐    ┌────┐    ┌────┐    ┌────┐
+PWM        │    │    │    │    │    │    │    │
+    0 ─────┘    └────┘    └────┘    └────┘    └────
+           ◄────►
+           1000μs
+    
+    T = 1000μs (1ms)
+    
+    Duty Cycle = (CCR/ARR) × 100%
+                = (500/1000) × 100%
+                = 50%
+
+    Frequency = 1/T = 1/1ms = 1kHz
+
+Chú thích:
+- ARR (Auto Reload Register) = 1000: Giá trị đếm tối đa
+- CCR (Capture Compare Register) = 500: Giá trị so sánh
+- PSC (Prescaler): Bộ chia tần số, tạo ra chu kỳ 1ms
+- T: Chu kỳ của một xung hoàn chỉnh
+```
+
+#### 🔄 Nguyên lý hoạt động:
+1. **Counter (CNT)** đếm từ 0 đến ARR (1000)
+2. So sánh CNT với CCR (500):
+   - Khi CNT < CCR: PWM = 1 (HIGH)
+   - Khi CNT ≥ CCR: PWM = 0 (LOW)
+3. Khi CNT = ARR, counter reset về 0 và bắt đầu chu kỳ mới
+
+#### 📈 Các thông số:
+- **Tần số** = 1kHz (1000 xung/giây)
+- **Chu kỳ** = 1ms (1000μs)
+- **Duty Cycle** = 50% (xung HIGH chiếm 50% chu kỳ)
+
+#### 🎯 Ứng dụng:
+- LED: Điều chỉnh độ sáng
+- Motor: Điều khiển tốc độ
+- Servo: Điều khiển góc (thường dùng T=20ms, xung 1-2ms)
