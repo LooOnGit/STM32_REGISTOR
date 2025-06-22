@@ -37,6 +37,32 @@ Timer là một phần cứng quan trọng trong STM32, được sử dụng đ�
 
 ## 🔧 Cấu trúc Timer và Thanh ghi
 
+### Cách tính thời gian với Prescaler:
+
+Timer sử dụng 2 thành phần chính để tạo thời gian:
+1. CNT (set trong TIMx_ARR - auto-reload)
+2. Tcnt (set trong TIMx_PSC - pre-scaler)
+
+Công thức tính:
+```
+CNT * Tcnt = 1 sec ~ 1000 msec
+1000 * 1ms = 1000ms ~ 1s
+```
+
+Ví dụ với RCC 16MHz:
+```
+RCC (16MHz) -> Timer PSC (16000) -> 1ms
+                      |
+                      v
+                    1000 = 1ms
+```
+
+Kết quả:
+- Input: RCC Clock 16MHz
+- Timer PSC: 16000 (tạo ra xung 1ms)
+- Counter: 1000
+- Output: 1000Hz (chu kỳ 1ms)
+
 ### Các thanh ghi chính:
 
 | Thanh ghi | Offset | Mô tả |
