@@ -1,56 +1,95 @@
-# Hướng dẫn Timer PWM trên STM32
+# 📚 Hướng dẫn Timer PWM trên STM32F411
 
-## Tổng quan
-Repository này chứa các ví dụ và tài liệu hướng dẫn thực hiện Timer PWM (Pulse Width Modulation) trên vi điều khiển STM32F411 dựa trên bài giảng từ [Video Timer PWM STM32](https://www.youtube.com/watch?v=fZgGG5vrTno&list=PLeF_iec1JSb6FLu07L6uAleGYWszlG1rY&index=12).
+<div align="center">
+  <img src="https://www.st.com/content/ccc/fragment/product_related/rpn_information/product_circuit_diagram/group0/0c/36/dc/ae/ea/c2/45/7d/stm32f411ccu6-pinout/files/stm32f411ccu6-pinout.jpg/jcr:content/translations/en.stm32f411ccu6-pinout.jpg" width="400">
+</div>
 
-## PWM là gì?
-Pulse Width Modulation (PWM) là kỹ thuật được sử dụng để điều khiển công suất trung bình cung cấp cho tải bằng cách chuyển đổi nhanh tín hiệu giữa trạng thái cao và thấp. Các tham số chính của PWM bao gồm:
+## 📋 Mục lục
+1. [Tổng quan](#tổng-quan)
+2. [PWM là gì?](#pwm-là-gì)
+3. [Lý thuyết Timer PWM](#lý-thuyết-timer-pwm)
+4. [Thực hiện Timer PWM trên STM32](#thực-hiện-timer-pwm-trên-stm32)
+5. [Ví dụ mã nguồn](#ví-dụ-mã-nguồn)
+6. [Ứng dụng](#ứng-dụng)
+7. [Cấu trúc dự án](#cấu-trúc-dự-án)
+8. [Yêu cầu](#yêu-cầu-phần-cứng)
+9. [Tài liệu tham khảo](#tài-liệu-tham-khảo)
 
-- **Tần số**: Tốc độ chuyển đổi tín hiệu (Hz)
-- **Chu kỳ làm việc (Duty Cycle)**: Phần trăm thời gian tín hiệu ở mức cao
-- **Chu kỳ (Period)**: Tổng thời gian cho một chu kỳ hoàn chỉnh
-- **Độ rộng xung (Pulse Width)**: Thời gian tín hiệu duy trì ở mức cao
+## 🎯 Tổng quan
+Repository này chứa các ví dụ và tài liệu hướng dẫn thực hiện Timer PWM (Pulse Width Modulation) trên vi điều khiển STM32F411. Dự án này được xây dựng dựa trên bài giảng từ [Video Timer PWM STM32](https://www.youtube.com/watch?v=fZgGG5vrTno&list=PLeF_iec1JSb6FLu07L6uAleGYWszlG1rY&index=12).
 
-## Lý thuyết Timer PWM
+## ⚡ PWM là gì?
+Pulse Width Modulation (PWM) là kỹ thuật điều chế độ rộng xung, được sử dụng để điều khiển công suất trung bình cung cấp cho tải bằng cách chuyển đổi nhanh tín hiệu giữa trạng thái cao và thấp.
 
-### Khái niệm cơ bản
-1. **Bộ đếm Timer**: Đếm từ 0 đến giá trị Auto-Reload Register (ARR)
-2. **Thanh ghi so sánh (CCR)**: Xác định khi nào đầu ra nên chuyển đổi
-3. **Chế độ PWM**: Timer tự động chuyển đổi đầu ra dựa trên giá trị bộ đếm
+### Các tham số chính của PWM:
+| Tham số | Mô tả |
+|---------|--------|
+| **Tần số** | Tốc độ chuyển đổi tín hiệu (Hz) |
+| **Chu kỳ làm việc (Duty Cycle)** | Phần trăm thời gian tín hiệu ở mức cao |
+| **Chu kỳ (Period)** | Tổng thời gian cho một chu kỳ hoàn chỉnh |
+| **Độ rộng xung (Pulse Width)** | Thời gian tín hiệu duy trì ở mức cao |
 
-### Các tham số PWM
-- **Chu kỳ** = (ARR + 1) / Tần số đồng hồ Timer
-- **Chu kỳ làm việc** = (CCR / (ARR + 1)) × 100%
-- **Tần số** = Tần số đồng hồ Timer / (ARR + 1)
+## 📐 Lý thuyết Timer PWM
 
-## Thực hiện Timer PWM trên STM32
+### 🔍 Khái niệm cơ bản
+1. **Bộ đếm Timer**: 
+   - Đếm từ 0 đến giá trị Auto-Reload Register (ARR)
+   - Tạo cơ sở thời gian cho PWM
 
-### Cấu hình phần cứng
-- **Timer**: TIM2, TIM3, TIM4, hoặc TIM5 (Timer đa năng)
-- **Kênh**: Bất kỳ 1 trong 4 kênh của mỗi timer
-- **Chế độ**: PWM Mode 1 hoặc PWM Mode 2
-- **Đầu ra**: Chân GPIO được cấu hình làm chức năng thay thế
+2. **Thanh ghi so sánh (CCR)**:
+   - Xác định thời điểm chuyển đổi đầu ra
+   - Điều khiển độ rộng xung
 
-### Các thanh ghi quan trọng
-1. **TIMx_CR1**: Thanh ghi điều khiển Timer
-2. **TIMx_ARR**: Thanh ghi tự động tải lại (Chu kỳ)
-3. **TIMx_CCRx**: Thanh ghi bắt/so sánh (Chu kỳ làm việc)
-4. **TIMx_CCMRx**: Thanh ghi chế độ bắt/so sánh
-5. **TIMx_CCER**: Thanh ghi bật bắt/so sánh
+3. **Chế độ PWM**:
+   - Timer tự động điều khiển đầu ra
+   - Dựa trên so sánh giá trị CNT và CCR
 
-### Các bước cấu hình
-1. Bật đồng hồ timer
-2. Cấu hình chân GPIO làm chức năng thay thế
-3. Đặt prescaler và ARR cho tần số mong muốn
-4. Cấu hình chế độ PWM trong thanh ghi CCMR
-5. Đặt giá trị CCR cho chu kỳ làm việc mong muốn
-6. Bật timer và đầu ra PWM
+### 📊 Các công thức PWM
+```
+Chu kỳ = (ARR + 1) / Tần số đồng hồ Timer
+Chu kỳ làm việc = (CCR / (ARR + 1)) × 100%
+Tần số = Tần số đồng hồ Timer / (ARR + 1)
+```
 
-## Ví dụ mã nguồn
+## 🛠 Thực hiện Timer PWM trên STM32
 
-### Thiết lập PWM cơ bản
+### Cấu hình Capture/Compare
+1. **Enable channel (CCER)**
+   ```c
+   TIMx->CCER |= TIM_CCER_CC1E;  // Kích hoạt kênh 1
+   ```
+
+2. **Chọn chế độ Compare (CCMR)**
+   ```c
+   TIMx->CCMR1 |= TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2;  // PWM Mode 1
+   ```
+
+3. **Set giá trị Compare (CCR)**
+   ```c
+   TIMx->CCR1 = value;  // Đặt duty cycle
+   ```
+
+### 🔧 Cấu hình phần cứng
+| Thành phần | Mô tả |
+|------------|--------|
+| **Timer** | TIM2, TIM3, TIM4, TIM5 (Timer đa năng) |
+| **Kênh** | 4 kênh độc lập trên mỗi timer |
+| **Chế độ** | PWM Mode 1 hoặc PWM Mode 2 |
+| **Đầu ra** | GPIO với chức năng thay thế |
+
+### 📝 Các thanh ghi quan trọng
+| Thanh ghi | Chức năng |
+|-----------|-----------|
+| TIMx_CR1 | Điều khiển Timer |
+| TIMx_ARR | Tự động tải lại (Chu kỳ) |
+| TIMx_CCRx | Bắt/so sánh (Duty Cycle) |
+| TIMx_CCMRx | Chế độ bắt/so sánh |
+| TIMx_CCER | Bật/tắt bắt/so sánh |
+
+## 💻 Ví dụ mã nguồn
+
+### Khởi tạo PWM cơ bản
 ```c
-// Cấu hình Timer PWM
 void Timer_PWM_Init(void)
 {
     // Bật đồng hồ timer
@@ -58,30 +97,25 @@ void Timer_PWM_Init(void)
     
     // Cấu hình timer
     htim2.Instance = TIM2;
-    htim2.Init.Prescaler = 83;  // 84MHz / 84 = 1MHz
-    htim2.Init.Period = 999;    // 1MHz / 1000 = 1kHz
+    htim2.Init.Prescaler = 83;        // 84MHz / 84 = 1MHz
+    htim2.Init.Period = 999;          // 1MHz / 1000 = 1kHz
     htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     
     HAL_TIM_Base_Init(&htim2);
     
     // Cấu hình PWM
     sConfigOC.OCMode = TIM_OCMODE_PWM1;
-    sConfigOC.Pulse = 500;  // 50% chu kỳ làm việc
+    sConfigOC.Pulse = 500;            // 50% duty cycle
     sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
     
     HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1);
-    
-    // Khởi động PWM
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 }
 ```
 
-### Điều khiển chu kỳ làm việc thay đổi
+### Điều chỉnh Duty Cycle
 ```c
-// Thay đổi chu kỳ làm việc động
 void PWM_SetDutyCycle(uint16_t duty_cycle)
 {
     uint16_t ccr_value = (duty_cycle * (htim2.Init.Period + 1)) / 100;
@@ -89,52 +123,57 @@ void PWM_SetDutyCycle(uint16_t duty_cycle)
 }
 ```
 
-## Ứng dụng
+## 🎯 Ứng dụng
 
-### Điều khiển độ sáng LED
-- Sử dụng PWM để điều khiển độ sáng LED
-- Chu kỳ làm việc quyết định độ sáng cảm nhận
-- Tần số nên > 100Hz để tránh nhấp nháy
+### 💡 Điều khiển độ sáng LED
+- PWM điều chỉnh độ sáng LED
+- Duty cycle ↔ độ sáng
+- Tần số > 100Hz (tránh nhấp nháy)
 
-### Điều khiển tốc độ động cơ
-- PWM điều khiển tốc độ động cơ
-- Chu kỳ làm việc cao hơn = động cơ nhanh hơn
-- Tần số ảnh hưởng đến hành vi động cơ
+### ⚙️ Điều khiển động cơ
+- PWM điều khiển tốc độ
+- Duty cycle ↔ tốc độ quay
+- Tần số phù hợp với động cơ
 
-### Điều khiển servo
-- Độ rộng xung PWM điều khiển vị trí servo
-- Phạm vi điển hình: 1ms đến 2ms độ rộng xung
-- Tần số: 50Hz (chu kỳ 20ms)
+### 🤖 Điều khiển servo
+- Độ rộng xung: 1-2ms
+- Tần số: 50Hz (20ms)
+- Vị trí tương ứng: 0-180°
 
-## Cấu trúc dự án
+## 📁 Cấu trúc dự án
 ```
 STM32_REGISTOR/
-├── STM32F4/                    # Dự án STM32F4 chính
-├── STM32F411_Workspace1/       # Workspace với nhiều dự án
-│   ├── FLASH/                  # Dự án dựa trên Flash
-│   ├── FuntionInRam/           # Dự án dựa trên RAM
-│   ├── FW_test_led/            # Firmware test LED
-│   ├── FW1_Bootloader/         # Firmware bootloader
-│   ├── FW2_App1/               # Ứng dụng 1
-│   └── FW3_App2/               # Ứng dụng 2
-└── Documents/                  # Tài liệu STM32
+├── 📂 STM32F4/                 # Dự án STM32F4 chính
+├── 📂 STM32F411_Workspace1/    # Workspace với nhiều dự án
+│   ├── 📂 FLASH/              # Dự án dựa trên Flash
+│   ├── 📂 FuntionInRam/       # Dự án dựa trên RAM
+│   ├── 📂 FW_test_led/        # Firmware test LED
+│   ├── 📂 FW1_Bootloader/     # Firmware bootloader
+│   ├── 📂 FW2_App1/           # Ứng dụng 1
+│   └── 📂 FW3_App2/           # Ứng dụng 2
+└── 📂 Documents/               # Tài liệu STM32
 ```
 
-## Yêu cầu phần cứng
-- Board phát triển STM32F411VET6
-- LED để test (tùy chọn)
-- Dao động kế để phân tích dạng sóng (tùy chọn)
-- Động cơ hoặc servo cho ứng dụng thực tế (tùy chọn)
+## 🔧 Yêu cầu phần cứng
+- ✅ Board phát triển STM32F411VET6
+- 💡 LED để test (tùy chọn)
+- 📊 Dao động kế để phân tích dạng sóng (tùy chọn)
+- 🔄 Động cơ hoặc servo cho ứng dụng thực tế (tùy chọn)
 
-## Yêu cầu phần mềm
-- STM32CubeIDE hoặc IDE tương tự
-- Thư viện STM32 HAL
-- STM32CubeMX để cấu hình (tùy chọn)
+## 💻 Yêu cầu phần mềm
+- ✅ STM32CubeIDE hoặc IDE tương tự
+- ✅ Thư viện STM32 HAL
+- ✅ STM32CubeMX để cấu hình (tùy chọn)
 
-## Tài liệu tham khảo
-- [Video hướng dẫn Timer PWM STM32](https://www.youtube.com/watch?v=fZgGG5vrTno&list=PLeF_iec1JSb6FLu07L6uAleGYWszlG1rY&index=12)
-- Sổ tay tham khảo STM32F411 (RM0383)
-- Sổ tay lập trình STM32F4 (PM0214)
+## 📚 Tài liệu tham khảo
+- 🎥 [Video hướng dẫn Timer PWM STM32](https://www.youtube.com/watch?v=fZgGG5vrTno&list=PLeF_iec1JSb6FLu07L6uAleGYWszlG1rY&index=12)
+- 📖 Sổ tay tham khảo STM32F411 (RM0383)
+- 📖 Sổ tay lập trình STM32F4 (PM0214)
 
-## Giấy phép
-Dự án này dành cho mục đích giáo dục. Hãy tự do sử dụng và chỉnh sửa mã nguồn cho các dự án của riêng bạn.
+## 📝 Giấy phép
+Dự án này được phát triển cho mục đích giáo dục. Bạn có thể tự do sử dụng và chỉnh sửa mã nguồn cho các dự án của riêng mình.
+
+---
+<div align="center">
+  <i>Developed with ❤️ for STM32 Community</i>
+</div>
