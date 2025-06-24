@@ -59,21 +59,66 @@ HAL_SPI_Receive(&hspi1, &received, 1, 100);
 
 ---
 
-## 🔍 Giới thiệu chi tiết về SPI
+## 🔄 Cách hoạt động của SPI
 
-- 📚 **SPI là gì:** Giao tiếp Ngoại vi Nối tiếp (SPI) là một giao tiếp nối tiếp **đồng bộ**
-- 💡 *SPI hoạt động theo cách hơi khác biệt. Đây là một bus dữ liệu "đồng bộ", nghĩa là nó sử dụng các đường riêng biệt cho dữ liệu và một đường "xung nhịp" để giữ cho cả hai phía luôn đồng bộ hoàn hảo.*
+<div align="center">
+  <img src="image-1.png" alt="How SPI Works" width="800"/>
+</div>
 
-### 🔌 Sơ đồ kết nối SPI
+### 📊 Giản đồ thời gian truyền dữ liệu
 
-```
-Master                Slave
-------                -----
-SCLK   -------------- SCLK
-MOSI   -------------- MOSI
-MISO   -------------- MISO
-SS     -------------- SS
-```
+Trong ví dụ trên, ta có thể thấy:
+
+1. 🔄 **Truyền dữ liệu từ Master đến Slave (MOSI)**:
+   - Master gửi ký tự 'S' (0x53 trong ASCII)
+   - Dữ liệu: `1 1 0 0 1 0 1 0` (LSB first)
+   - Được truyền theo từng bit tại mỗi xung clock
+
+2. 🔄 **Truyền dữ liệu từ Slave đến Master (MISO)**:
+   - Slave gửi ký tự 'F' (0x46 trong ASCII)
+   - Dữ liệu: `0 1 1 0 0 0 1 0` (LSB first)
+   - Được truyền đồng thời với dữ liệu MOSI
+
+3. ⏰ **Xung clock (SCK)**:
+   - Do Master tạo ra
+   - 8 xung clock cho mỗi byte dữ liệu
+   - Tần số có thể được cấu hình (thường từ vài trăm kHz đến vài MHz)
+
+4. 🎯 **Slave Select (SS/CS)**:
+   - Kéo xuống mức thấp khi bắt đầu truyền
+   - Giữ mức thấp trong suốt quá trình truyền
+   - Kéo lên mức cao khi kết thúc
+
+### 🔍 Đặc điểm quan trọng
+
+1. 🔁 **Truyền song song hai chiều**:
+   - MOSI và MISO hoạt động đồng thời
+   - Trong một chu kỳ truyền 8 bit:
+     * Master gửi 1 byte qua MOSI
+     * Đồng thời nhận 1 byte từ MISO
+
+2. 🎮 **Điều khiển bởi Master**:
+   ```
+   Master ──────┐
+      │ SCK  ───┼──> Slave
+      │ MOSI ───┼──>
+      │ MISO <──┼───
+      │ SS   ───┼──>
+      └─────────┘
+   ```
+
+3. ⚡ **Ưu điểm**:
+   - Tốc độ truyền cao (có thể đạt hàng chục MHz)
+   - Full-duplex (truyền và nhận cùng lúc)
+   - Giao thức đơn giản, dễ cài đặt
+   - Không cần địa chỉ như I2C
+   - Không cần bộ đệm như UART
+
+4. 📝 **Nhược điểm**:
+   - Cần nhiều dây (4 dây cho 1 slave)
+   - Khoảng cách truyền ngắn
+   - Không có cơ chế kiểm tra lỗi
+   - Chỉ hỗ trợ một master
 
 ---
 
@@ -117,3 +162,8 @@ Mode 3 (CPOL=1, CPHA=1):
 SCK   __|‾‾|__|‾‾|__
 MOSI  --XX|--XX|--XX|   (X: Dữ liệu được lấy mẫu)
 ```
+
+> 💡 **Lưu ý quan trọng**: 
+> - SPI luôn đảm bảo dữ liệu được truyền đúng nhịp clock, không bị mất hay trượt bit
+> - UART có thể bị mất đồng bộ nếu baud rate không chính xác hoặc có nhiễu
+
