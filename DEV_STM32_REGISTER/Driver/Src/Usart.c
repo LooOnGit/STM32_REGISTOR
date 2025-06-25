@@ -1,6 +1,6 @@
 
-#include"E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\clock.h"
-#include"E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\Usart.h"
+#include"clock.h"
+#include"Usart.h"
 #include"stdint.h"
 #include"string.h"
 #include<stdarg.h>

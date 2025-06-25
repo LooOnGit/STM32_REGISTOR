@@ -1,57 +1,70 @@
-# STM32 Register Programming Project
-# Dự án Lập trình Thanh ghi STM32
+# 🎯 STM32 Register Programming Project
 
-## Quy trình Biên dịch và Nạp chương trình
+<div align="center">
+  <img src="https://www.st.com/content/ccc/site/homepage/stcom_homepage_2020_q4/images/st-site-image01.jpg" width="400">
+
+  ![Version](https://img.shields.io/badge/STM32-F411-blue)
+  ![License](https://img.shields.io/badge/license-MIT-green)
+  ![Status](https://img.shields.io/badge/status-active-success)
+</div>
+
+## 📝 Quy trình Biên dịch và Nạp chương trình
+
+```mermaid
+graph LR
+    A[File .c] --> B[Compile .o]
+    B --> C[Link .elf]
+    C --> D[Binary .bin]
+    D --> E[ST-Link]
+    E --> F[STM32F4]
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style F fill:#bbf,stroke:#333,stroke-width:2px
 ```
-[File .c] --> [Compile (.o)] --> [Link (.elf)] --> [Binary (.bin)] --> [ST-Link] --> [STM32F4]
+
+### 🔍 Chi tiết các bước:
+
+| Bước | File | Mô tả |
+|------|------|--------|
+| 1️⃣ | **File .c** | • File mã nguồn viết bằng C<br>• Chứa code điều khiển thanh ghi<br>• Dễ đọc, dễ bảo trì |
+| 2️⃣ | **File .o** | • Biên dịch file .c thành mã máy dạng object<br>• Mã máy này chưa hoàn chỉnh<br>• Còn chứa thông tin debug và bảng ký hiệu |
+| 3️⃣ | **File .elf** | • Liên kết các file .o thành một file thực thi<br>• Gán địa chỉ cụ thể cho code và data<br>• Sắp xếp các section (.text, .data, .bss) |
+| 4️⃣ | **File .bin** | • Chuyển từ .elf sang định dạng nhị phân thuần túy<br>• Chỉ chứa mã máy và dữ liệu<br>• Sẵn sàng để nạp vào Flash |
+
+### 💻 Lệnh biên dịch cơ bản:
+
+<details>
+<summary>📚 Xem help và các tham số của arm-none-eabi-gcc</summary>
+
+```bash
+# Xem help và các tham số
+arm-none-eabi-gcc --help
+arm-none-eabi-gcc --target-help    # Xem các tùy chọn cho ARM
 ```
 
-### Chi tiết các bước:
+#### Các tham số quan trọng:
+| Tham số | Mô tả |
+|---------|--------|
+| `-c` | Chỉ biên dịch không liên kết |
+| `-g` | Tạo thông tin debug |
+| `-O0` → `-O3` | Các mức tối ưu hóa |
+| `-mcpu=<cpu>` | Chọn kiến trúc CPU |
+| `-mthumb` | Dùng bộ lệnh Thumb |
+| `-mfloat-abi=<abi>` | Chọn ABI cho floating-point |
+| `-mfpu=<fpu>` | Chọn đơn vị FPU |
+| `-I<dir>` | Thêm thư mục chứa header |
+| `-D<macro>` | Định nghĩa macro |
+| `-Wall` | Hiện tất cả cảnh báo |
+</details>
 
-1. **File .c (Source Code)**
-   - File mã nguồn chứa code C
-   - Viết các hàm điều khiển thanh ghi
-   - Cấu hình các chân GPIO, Timer, etc.
+<details>
+<summary>🛠️ Các lệnh biên dịch cơ bản</summary>
 
-2. **Compile (.o)**
-   - Biên dịch file .c thành file object (.o)
-   - Kiểm tra cú pháp
-   - Tối ưu hóa code
-   - Tạo mã máy cho từng file riêng biệt
-
-3. **Link (.elf - Executable and Linkable Format)**
-   - Liên kết các file .o thành một file thực thi
-   - Gán địa chỉ cụ thể cho code và data
-   - Sắp xếp các section:
-     + .text: chứa mã máy của các hàm
-     + .data: chứa biến toàn cục đã khởi tạo
-     + .bss: chứa biến toàn cục chưa khởi tạo
-   - Tuân theo file linker script (.ld)
-
-4. **Binary (.bin)**
-   - Chuyển đổi file .elf thành binary
-   - Tạo file nhị phân thuần túy
-   - Sẵn sàng để nạp vào STM32
-
-5. **ST-Link**
-   - Công cụ nạp chương trình
-   - Kết nối qua cổng SWD hoặc JTAG
-   - Hỗ trợ debug trực tiếp
-
-6. **STM32F4**
-   - Vi điều khiển đích
-   - Nhận và thực thi chương trình
-   - Chạy từ bộ nhớ Flash
-
-### Lệnh biên dịch cơ bản:
 ```bash
 # Kiểm tra version gcc 
 arm-none-eabi-gcc --version
 
 # Biên dịch file .c thành .o
-arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -mthumb -std=gnu11 -o main.o
-- std(standard tùy công ty lựa chọn nên hỏi)
-- tùy thêm cpu nào mà chọn cho đúng vì đang dùng stm32f411 nên là cortex-m4
+arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -mthumb -std=gnu11 -IDriver/Inc -o build/main.o
 
 # Liên kết thành file .elf
 arm-none-eabi-gcc main.o -mcpu=cortex-m4 -mthumb -T STM32F411VETX_FLASH.ld -o program.elf
@@ -62,16 +75,50 @@ arm-none-eabi-objcopy -O binary program.elf program.bin
 # Nạp chương trình (sử dụng ST-Link)
 st-flash write program.bin 0x08000000
 ```
+</details>
 
-### Giải thích các tham số biên dịch:
-- `-mcpu=cortex-m4`: Chỉ định CPU là ARM Cortex-M4
-- `-mthumb`: Sử dụng bộ lệnh Thumb (16/32-bit)
-- `-std=gnu11`: Sử dụng chuẩn C GNU11
-- `-T STM32F411VETX_FLASH.ld`: File linker script định nghĩa bố trí bộ nhớ
-- `-c`: Chỉ biên dịch, không liên kết
-- `-o`: Chỉ định tên file đầu ra
+<details>
+<summary>🚀 Ví dụ lệnh biên dịch với đầy đủ tùy chọn</summary>
 
-### Note
+```bash
+arm-none-eabi-gcc -c main.c \
+    -mcpu=cortex-m4 \
+    -mthumb \
+    -mfloat-abi=hard \
+    -mfpu=fpv4-sp-d16 \
+    -O2 \
+    -g \
+    -Wall \
+    -std=gnu11 \
+    -DSTM32F411xE \
+    -IDriver/Inc \
+    -ICore/Inc \
+    -o build/main.o
+```
+</details>
+
+### 📁 Cấu trúc thư mục cho biên dịch:
+```
+Project/
+├── 📂 Driver/
+│   └── 📂 Inc/         # Thư mục chứa file header (.h)
+├── 📂 Core/
+│   ├── 📂 Inc/         # Header files
+│   └── 📂 Src/         # Source files (.c)
+└── 📂 build/           # Thư mục chứa file sau biên dịch
+    ├── 📄 main.o
+    ├── 📄 program.elf
+    └── 📄 program.bin
+```
+
+### ℹ️ Note
 - Gcc là trình biên dịch cho máy tính (x86/x64)
 - arm-none-eabi-gcc là trình biên dịch cho vi điều khiển ARM
 - Cần thêm các tham số phù hợp với kiến trúc ARM Cortex-M4
+- Đường dẫn trong `-I` phải trỏ đến thư mục chứa file .h
+- Nên tạo thư mục build để chứa các file biên dịch
+
+---
+<div align="center">
+  <i>Made with ❤️ for STM32 Development</i>
+</div>

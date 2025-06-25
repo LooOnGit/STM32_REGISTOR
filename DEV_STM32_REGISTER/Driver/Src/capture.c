@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\clock.h"
+#include "clock.h"
 
 
 #define TIM5_ADDR_BASE 0x40000C00 

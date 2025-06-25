@@ -1,7 +1,7 @@
 
-#include "E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\clock.h"
+#include "clock.h"
 #include "stdint.h"
-#include "E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\delay.h"
+#include "delay.h"
 #define TIMER 1
 #define SYS_TICK 2
 #if DELAY_SRC != TIMER1 && DELAY_SRC != SYS_TICK

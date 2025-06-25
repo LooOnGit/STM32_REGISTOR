@@ -1,6 +1,6 @@
 #include <stdint.h>
-#include "E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\clock.h"
-#include "E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\ADC.h"
+#include "clock.h"
+#include "ADC.h"
 #define ADC_ADDRESS_BASE 0x40012000
 #define ADC_IN 16
 #define ADC_IN1 1

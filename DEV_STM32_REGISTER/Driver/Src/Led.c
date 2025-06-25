@@ -1,7 +1,7 @@
 
 
-#include "E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\led.h"
-#include "E:\Tech\Embedded\STM32_REGISTOR\DEV_STM32_REGISTER\Driver\Inc\clock.h"
+#include "led.h"
+#include "clock.h"
 #include"stdint.h"
 void led_init()
 {
