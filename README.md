@@ -1,214 +1,77 @@
-# Timer trong STM32F4
+# STM32 Register Programming Project
+# Dự án Lập trình Thanh ghi STM32
 
-## 📋 Tổng quan về Timer
-
-Timer là một phần cứng quan trọng trong STM32, được sử dụng để:
-- ⏱️ Đo thời gian chính xác
-- 🔄 Tạo độ trễ microsecond
-- 📊 Tạo xung PWM
-- 📈 Đo tần số/chu kỳ tín hiệu
-- ⚡ Tạo ngắt định kỳ
-
-## 🔄 Các loại Timer
-
-### 1. Basic Timer (TIM6, TIM7)
-- Chỉ đếm lên/xuống
-- Không có đầu vào/ra
-- Ứng dụng:
-  + Tạo ngắt định kỳ
-  + Trigger cho DAC
-
-### 2. General Purpose Timer (TIM2-TIM5)
-- Đếm lên/xuống/hai chiều
-- 4 kênh Capture/Compare
-- Hỗ trợ Encoder và DMA
-- Ứng dụng:
-  + PWM output
-  + Input capture
-  + Output compare
-
-### 3. Advanced Timer (TIM1, TIM8)
-- Tất cả tính năng của GP Timer
-- Thêm:
-  + Dead-time insertion
-  + Break input
-  + Complementary outputs
-- Chuyên điều khiển động cơ
-
-## 🔧 Cấu trúc Timer và Thanh ghi
-
-### Cách tính thời gian với Prescaler:
-
-Timer sử dụng 2 thành phần chính để tạo thời gian:
-1. CNT (set trong TIMx_ARR - auto-reload) = 1000 (< 65535)
-2. Tcnt (set trong TIMx_PSC - pre-scaler) = 16000 (< 65535)
-
-Lưu ý: Cả CNT và Tcnt đều là thanh ghi 16-bit nên giá trị tối đa là 65535.
-
-Công thức tính:
+## Quy trình Biên dịch và Nạp chương trình
 ```
-CNT * Tcnt = 1 sec ~ 1000 msec
-1000 * 1ms = 1000ms ~ 1s
+[File .c] --> [Compile (.o)] --> [Link (.elf)] --> [Binary (.bin)] --> [ST-Link] --> [STM32F4]
 ```
 
-Ví dụ với RCC 16MHz:
-```
-RCC (16MHz) -> Timer PSC (16000) -> 1ms
-                      |
-                      v
-                    1000 = 1ms
-```
+### Chi tiết các bước:
 
-Kết quả:
-- Input: RCC Clock 16MHz
-- Timer PSC: 16000 (tạo ra xung 1ms)
-- Counter: 1000
-- Output: 1000Hz (chu kỳ 1ms)
+1. **File .c (Source Code)**
+   - File mã nguồn chứa code C
+   - Viết các hàm điều khiển thanh ghi
+   - Cấu hình các chân GPIO, Timer, etc.
 
-### Các thanh ghi chính:
+2. **Compile (.o)**
+   - Biên dịch file .c thành file object (.o)
+   - Kiểm tra cú pháp
+   - Tối ưu hóa code
+   - Tạo mã máy cho từng file riêng biệt
 
-| Thanh ghi | Offset | Mô tả |
-|-----------|--------|--------|
-| TIMx_CR1 | 0x00 | Control Register 1 |
-| TIMx_CR2 | 0x04 | Control Register 2 |
-| TIMx_SMCR | 0x08 | Slave Mode Control |
-| TIMx_DIER | 0x0C | DMA/Interrupt Enable |
-| TIMx_SR | 0x10 | Status Register |
-| TIMx_EGR | 0x14 | Event Generation |
-| TIMx_CCMR1 | 0x18 | Capture/Compare Mode 1 |
-| TIMx_CCMR2 | 0x1C | Capture/Compare Mode 2 |
-| TIMx_CCER | 0x20 | Capture/Compare Enable |
-| TIMx_CNT | 0x24 | Counter Value |
-| TIMx_PSC | 0x28 | Prescaler Value |
-| TIMx_ARR | 0x2C | Auto-Reload Value |
-| TIMx_CCR1 | 0x34 | Capture/Compare 1 Value |
-| TIMx_CCR2 | 0x38 | Capture/Compare 2 Value |
-| TIMx_CCR3 | 0x3C | Capture/Compare 3 Value |
-| TIMx_CCR4 | 0x40 | Capture/Compare 4 Value |
+3. **Link (.elf - Executable and Linkable Format)**
+   - Liên kết các file .o thành một file thực thi
+   - Gán địa chỉ cụ thể cho code và data
+   - Sắp xếp các section:
+     + .text: chứa mã máy của các hàm
+     + .data: chứa biến toàn cục đã khởi tạo
+     + .bss: chứa biến toàn cục chưa khởi tạo
+   - Tuân theo file linker script (.ld)
 
-### Bit Fields trong CR1:
-```
-CEN  - Counter Enable (Bit 0)
-UDIS - Update Disable (Bit 1)
-URS  - Update Request Source (Bit 2)
-OPM  - One Pulse Mode (Bit 3)
-DIR  - Direction (Bit 4)
-CMS  - Center-aligned Mode (Bits 5-6)
-ARPE - Auto-reload Preload Enable (Bit 7)
-CKD  - Clock Division (Bits 8-9)
-```
+4. **Binary (.bin)**
+   - Chuyển đổi file .elf thành binary
+   - Tạo file nhị phân thuần túy
+   - Sẵn sàng để nạp vào STM32
 
-## 📊 Công thức tính toán
+5. **ST-Link**
+   - Công cụ nạp chương trình
+   - Kết nối qua cổng SWD hoặc JTAG
+   - Hỗ trợ debug trực tiếp
 
-```
-Timer_Clock = CPU_Clock / (APB1_Prescaler * Timer_Prescaler)
-Timer_Period = (ARR + 1) / Timer_Clock
-PWM_Frequency = Timer_Clock / (ARR + 1)
-PWM_DutyCycle = (CCRx / (ARR + 1)) * 100%
-```
+6. **STM32F4**
+   - Vi điều khiển đích
+   - Nhận và thực thi chương trình
+   - Chạy từ bộ nhớ Flash
 
-## ⏰ SysTick Timer
+### Lệnh biên dịch cơ bản:
+```bash
+# Kiểm tra version gcc 
+arm-none-eabi-gcc --version
 
-SysTick là một timer đặc biệt 24-bit được tích hợp trong tất cả các vi điều khiển ARM Cortex-M. Nó thường được sử dụng để tạo ra system tick cho hệ điều hành hoặc tạo độ trễ chính xác.
+# Biên dịch file .c thành .o
+arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -mthumb -std=gnu11 -o main.o
+- std(standard tùy công ty lựa chọn nên hỏi)
+- tùy thêm cpu nào mà chọn cho đúng vì đang dùng stm32f411 nên là cortex-m4
 
-### Đặc điểm của SysTick:
-- Timer 24-bit đếm xuống
-- 3 nguồn clock có thể chọn:
-  + Processor clock (HCLK)
-  + Processor clock/8
-  + External clock
-- Ngắt tự động khi đếm về 0
-- Tự động nạp lại giá trị từ RELOAD register
+# Liên kết thành file .elf
+arm-none-eabi-gcc main.o -mcpu=cortex-m4 -mthumb -T STM32F411VETX_FLASH.ld -o program.elf
 
-### Các thanh ghi SysTick:
+# Tạo file binary
+arm-none-eabi-objcopy -O binary program.elf program.bin
 
-| Thanh ghi | Offset | Mô tả |
-|-----------|--------|-------|
-| CTRL | 0xE000E010 | Control and Status Register |
-| LOAD | 0xE000E014 | Reload Value Register |
-| VAL | 0xE000E018 | Current Value Register |
-| CALIB | 0xE000E01C | Calibration Value Register |
-
-### Cấu hình SysTick cơ bản:
-```c
-// Cấu hình SysTick để ngắt mỗi 1ms với HCLK = 16MHz
-void SysTick_Init(void)
-{
-    // Tắt SysTick
-    SysTick->CTRL = 0;
-    
-    // Nạp giá trị RELOAD (16000 - 1 cho 1ms với HCLK = 16MHz)
-    SysTick->LOAD = 16000 - 1;
-    
-    // Reset giá trị hiện tại
-    SysTick->VAL = 0;
-    
-    // Chọn source clock (processor clock)
-    // Enable SysTick interrupt
-    // Enable SysTick counter
-    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
-                    SysTick_CTRL_TICKINT_Msk |
-                    SysTick_CTRL_ENABLE_Msk;
-}
-
-// Handler cho SysTick interrupt
-void SysTick_Handler(void)
-{
-    // Xử lý ngắt ở đây
-    // Được gọi mỗi 1ms
-}
+# Nạp chương trình (sử dụng ST-Link)
+st-flash write program.bin 0x08000000
 ```
 
-### Tạo độ trễ với SysTick:
-```c
-void Delay_ms(uint32_t ms)
-{
-    uint32_t start = SysTick->VAL;
-    uint32_t ticks = ms * (SystemCoreClock / 1000);
-    uint32_t elapsed = 0;
-    
-    do {
-        elapsed = start - SysTick->VAL;
-        if (elapsed > ticks)
-            break;
-    } while (1);
-}
-```
+### Giải thích các tham số biên dịch:
+- `-mcpu=cortex-m4`: Chỉ định CPU là ARM Cortex-M4
+- `-mthumb`: Sử dụng bộ lệnh Thumb (16/32-bit)
+- `-std=gnu11`: Sử dụng chuẩn C GNU11
+- `-T STM32F411VETX_FLASH.ld`: File linker script định nghĩa bố trí bộ nhớ
+- `-c`: Chỉ biên dịch, không liên kết
+- `-o`: Chỉ định tên file đầu ra
 
-### Các bit trong CTRL Register:
-```
-ENABLE    - Enable counter (Bit 0)
-TICKINT   - Enable SysTick interrupt (Bit 1)
-CLKSOURCE - Clock source selection (Bit 2)
-COUNTFLAG - Timer counted to 0 (Bit 16)
-```
-
-### Công thức tính:
-```
-Tick_Period = (RELOAD + 1) / HCLK_Frequency
-Interrupt_Frequency = HCLK_Frequency / (RELOAD + 1)
-```
-
-## 🎯 Tips và Debug
-
-### Các lỗi thường gặp:
-1. Timer không hoạt động
-   - ✔️ Kiểm tra RCC clock enable
-   - ✔️ Xác nhận bit CEN trong CR1
-   - ✔️ Kiểm tra giá trị PSC và ARR
-
-2. PWM không hoạt động
-   - ✔️ Kiểm tra GPIO alternate function
-   - ✔️ Xác nhận CCMR1 configuration
-   - ✔️ Kiểm tra CCER enable bit
-
-## 📚 Tài liệu tham khảo
-- STM32F4 Reference Manual (RM0090)
-- STM32F4 Register Description
-- STM32F4 Datasheet
-
----
-<div align="center">
-  <i>Developed with ❤️ for STM32 Community</i>
-</div>
-
+### Note
+- Gcc là trình biên dịch cho máy tính (x86/x64)
+- arm-none-eabi-gcc là trình biên dịch cho vi điều khiển ARM
+- Cần thêm các tham số phù hợp với kiến trúc ARM Cortex-M4
