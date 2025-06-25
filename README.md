@@ -49,8 +49,7 @@ arm-none-eabi-gcc --target-help    # Xem các tùy chọn cho ARM
 | `-O0` → `-O3` | Các mức tối ưu hóa |
 | `-mcpu=<cpu>` | Chọn kiến trúc CPU |
 | `-mthumb` | Dùng bộ lệnh Thumb |
-| `-mfloat-abi=<abi>` | Chọn ABI cho floating-point |
-| `-mfpu=<fpu>` | Chọn đơn vị FPU |
+| `-x` | Chỉ định loại ngôn ngữ đầu vào |
 | `-I<dir>` | Thêm thư mục chứa header |
 | `-D<macro>` | Định nghĩa macro |
 | `-Wall` | Hiện tất cả cảnh báo |
@@ -63,11 +62,14 @@ arm-none-eabi-gcc --target-help    # Xem các tùy chọn cho ARM
 # Kiểm tra version gcc 
 arm-none-eabi-gcc --version
 
+# Biên dịch file startup assembly (.s)
+arm-none-eabi-gcc -x assembler-with-cpp -c startup_stm32f411vetx.s -mcpu=cortex-m4 -std=gnu11 -o build/startup.o
+
 # Biên dịch file .c thành .o
 arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -mthumb -std=gnu11 -IDriver/Inc -o build/main.o
 
 # Liên kết thành file .elf
-arm-none-eabi-gcc main.o -mcpu=cortex-m4 -mthumb -T STM32F411VETX_FLASH.ld -o program.elf
+arm-none-eabi-gcc main.o startup.o -mcpu=cortex-m4 -mthumb -T STM32F411VETX_FLASH.ld -o program.elf
 
 # Tạo file binary
 arm-none-eabi-objcopy -O binary program.elf program.bin
@@ -77,25 +79,16 @@ st-flash write program.bin 0x08000000
 ```
 </details>
 
-<details>
-<summary>🚀 Ví dụ lệnh biên dịch với đầy đủ tùy chọn</summary>
-
+### 📝 Giải thích lệnh biên dịch file Startup:
 ```bash
-arm-none-eabi-gcc -c main.c \
-    -mcpu=cortex-m4 \
-    -mthumb \
-    -mfloat-abi=hard \
-    -mfpu=fpv4-sp-d16 \
-    -O2 \
-    -g \
-    -Wall \
-    -std=gnu11 \
-    -DSTM32F411xE \
-    -IDriver/Inc \
-    -ICore/Inc \
-    -o build/main.o
+arm-none-eabi-gcc -x assembler-with-cpp -c startup_stm32f411vetx.s -mcpu=cortex-m4 -std=gnu11 -o build/startup.o
 ```
-</details>
+- `-x assembler-with-cpp`: Chỉ định đây là file assembly có thể chứa preprocessor directives
+- `-c`: Chỉ biên dịch, không liên kết
+- `startup_stm32f411vetx.s`: File startup assembly chứa vector table và khởi tạo hệ thống
+- `-mcpu=cortex-m4`: Chỉ định CPU đích
+- `-std=gnu11`: Chuẩn GNU11
+- `-o build/startup.o`: File đầu ra
 
 ### 📁 Cấu trúc thư mục cho biên dịch:
 ```
