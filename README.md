@@ -83,12 +83,43 @@ st-flash write program.bin 0x08000000
 ```bash
 arm-none-eabi-gcc -x assembler-with-cpp -c startup_stm32f411vetx.s -mcpu=cortex-m4 -std=gnu11 -o build/startup.o
 ```
-- `-x assembler-with-cpp`: Chỉ định đây là file assembly có thể chứa preprocessor directives
-- `-c`: Chỉ biên dịch, không liên kết
-- `startup_stm32f411vetx.s`: File startup assembly chứa vector table và khởi tạo hệ thống
-- `-mcpu=cortex-m4`: Chỉ định CPU đích
-- `-std=gnu11`: Chuẩn GNU11
-- `-o build/startup.o`: File đầu ra
+#### 🔍 Chi tiết từng phần:
+1. `arm-none-eabi-gcc`: 
+   - Trình biên dịch cho vi xử lý ARM
+   - `none-eabi`: biên dịch cho hệ thống nhúng (không có hệ điều hành)
+
+2. `-x assembler-with-cpp`: 
+   - Chỉ định đây là file assembly
+   - Cho phép sử dụng preprocessor của C trong file assembly
+   - Có thể dùng #include, #define trong file .s
+
+3. `-c`: 
+   - Chỉ biên dịch thành file object (.o)
+   - Không thực hiện liên kết (linking)
+
+4. `startup_stm32f411vetx.s`:
+   - File assembly chứa mã khởi động cho STM32F411
+   - Chứa vector bảng ngắt (Interrupt Vector Table)
+   - Mã khởi tạo stack và reset handler
+   - Các handler ngắt mặc định
+
+5. `-mcpu=cortex-m4`:
+   - Chỉ định loại CPU là Cortex-M4
+   - Tối ưu mã cho kiến trúc Cortex-M4
+
+6. `-std=gnu11`:
+   - Sử dụng chuẩn GNU C11
+   - Áp dụng cho phần preprocessor C
+
+7. `-o build/startup.o`:
+   - File đầu ra là startup.o
+   - Được lưu trong thư mục build
+
+#### 🎯 Mục đích của file startup:
+- Thiết lập môi trường ban đầu cho vi điều khiển
+- Xử lý quá trình reset
+- Cấu hình bảng vector ngắt
+- Chuyển điều khiển đến hàm main của chương trình
 
 ### 📁 Cấu trúc thư mục cho biên dịch:
 ```
@@ -110,6 +141,70 @@ Project/
 - Cần thêm các tham số phù hợp với kiến trúc ARM Cortex-M4
 - Đường dẫn trong `-I` phải trỏ đến thư mục chứa file .h
 - Nên tạo thư mục build để chứa các file biên dịch
+
+### 📝 Chi tiết lệnh trong Makefile:
+
+#### 1. Biên dịch các file nguồn:
+```bash
+# Biên dịch file main.c
+arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/main.o
+
+# Biên dịch các file trong thư mục Driver/Src
+arm-none-eabi-gcc -c Driver\Src\Led.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/led.o
+arm-none-eabi-gcc -c Driver\Src\ADC.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/ADC.o
+arm-none-eabi-gcc -c Driver\Src\clock.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/clock.o
+arm-none-eabi-gcc -c Driver\Src\delay.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/delay.o
+arm-none-eabi-gcc -c Driver\Src\capture.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/capture.o
+arm-none-eabi-gcc -c Driver\Src\Usart.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/Usart.o
+```
+
+Trong đó:
+- `-c`: Chỉ biên dịch, không liên kết
+- `-mcpu=cortex-m4`: Chỉ định CPU đích
+- `-std=gnu11`: Sử dụng chuẩn GNU C11
+- `-IDriver\Inc`: Thêm thư mục chứa file header
+- `-o build/xxx.o`: File đầu ra
+
+#### 2. Liên kết các file object:
+```bash
+arm-none-eabi-gcc build\ADC.o build\capture.o build\clock.o build\Delay.o build\Led.o build\main.o build\startup.o -T"STM32F411VETX_FLASH.ld" -Wl,-Map="file.map" -Wl,--gc-sections -static -o build/blink_led.elf
+```
+
+Trong đó:
+- `build\*.o`: Các file object cần liên kết
+- `-T"STM32F411VETX_FLASH.ld"`: Script mô tả bố trí bộ nhớ
+- `-Wl,-Map="file.map"`: Tạo file map để debug
+- `-Wl,--gc-sections`: Loại bỏ code không sử dụng
+- `-static`: Liên kết tĩnh
+- `-o build/blink_led.elf`: File thực thi đầu ra
+
+#### 3. Tạo file hex và binary:
+```bash
+# Tạo file hex để nạp và debug
+arm-none-eabi-objcopy -O ihex build/blink_led.elf build/blink_led.hex
+
+# Tạo file binary để nạp vào flash
+arm-none-eabi-objcopy -O binary build/blink_led.elf build/blink_led.bin
+```
+
+#### 4. Dọn dẹp và tạo mới:
+```bash
+# Xóa thư mục build
+rmdir /q /s build
+
+# Tạo lại thư mục build
+mkdir build
+```
+
+### 🔄 Quy trình sử dụng:
+1. `mingw32-make Clean`: Xóa các file đã biên dịch
+2. `mingw32-make All`: Biên dịch toàn bộ project
+3. Các file output trong thư mục `build`:
+   - `*.o`: File object
+   - `*.elf`: File thực thi
+   - `*.hex`: File hex để nạp/debug
+   - `*.bin`: File binary để nạp
+   - `*.map`: File map để debug
 
 ---
 <div align="center">
