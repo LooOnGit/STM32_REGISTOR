@@ -207,6 +207,84 @@ mkdir build
    - `*.map`: File map để debug
 
 ---
+
+## STM32 Startup và Linker Files
+
+### Startup Files
+File startup (ví dụ: `startup_stm32f411vetx.s`) là file assembly chứa:
+- Vector table chứa các interrupt handlers
+- Reset handler và các initialization code
+- Weak definitions cho các interrupt handlers
+- Stack initialization
+
+Mỗi dòng chip STM32 sẽ có file startup riêng, ví dụ:
+- STM32F411: `startup_stm32f411vetx.s`
+- STM32F401: `startup_stm32f401xc.s` 
+- STM32F103: `startup_stm32f103xb.s`
+
+### Linker Script Files
+Có 2 loại linker script chính:
+1. `STM32F411VETX_FLASH.ld`: Để chạy chương trình từ Flash memory
+   - Code được nạp vào Flash memory
+   - Data được copy vào RAM khi khởi động
+   - Thường dùng cho sản phẩm cuối
+
+2. `STM32F411VETX_RAM.ld`: Để chạy chương trình từ RAM
+   - Code và data đều nằm trong RAM
+   - Thường dùng cho debug và development
+   - Tốc độ thực thi nhanh hơn chạy từ Flash
+
+Linker script định nghĩa:
+- Memory layout (Flash, RAM, etc.)
+- Section placement (.text, .data, .bss)
+- Entry point
+- Stack và heap size
+
+### Lưu ý
+- File startup và linker script phải tương thích với chip đang sử dụng
+- Có thể lấy file mẫu từ STM32CubeMX hoặc STM32CubeIDE
+- Cần chỉnh sửa memory size trong linker script cho phù hợp với chip
+- File startup thường không cần chỉnh sửa
+
+### ST-LINK CLI Commands
+
+ST-LINK CLI là công cụ command line để tương tác với STM32 thông qua ST-LINK programmer. Một số lệnh cơ bản:
+
+#### Kiểm tra kết nối
+```bash
+ST-LINK_CLI -c SWD
+```
+Khi kết nối thành công, bạn sẽ thấy thông tin:
+- ST-LINK SN (Serial Number)
+- Firmware version
+- Connection mode
+- Device ID
+- Flash Size
+- Device family (vd: STM32F411xC/E)
+
+#### Đọc memory
+```bash
+ST-LINK_CLI -c SWD -r8 0x08000000 8
+```
+- `-r8`: Read 8-bit
+- `0x08000000`: Địa chỉ bắt đầu đọc (Flash memory)
+- `8`: Số byte cần đọc
+
+#### Nạp chương trình
+```bash
+ST-LINK_CLI -c SWD -P build/blink_led.hex
+```
+- `-P`: Program file
+- `-V`: Verify sau khi nạp
+- `-Rst`: Reset chip sau khi nạp
+
+### Lưu ý khi sử dụng ST-LINK
+- Đảm bảo đã cài đặt ST-LINK drivers
+- Kiểm tra kết nối vật lý (cáp USB, nguồn board)
+- SWD frequency mặc định là 4000kHz
+- Target voltage thường là 2.9V - 3.3V
+- Reset mode mặc định là Software reset
+
 <div align="center">
   <i>Made with ❤️ for STM32 Development</i>
 </div>

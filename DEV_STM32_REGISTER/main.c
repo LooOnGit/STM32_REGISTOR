@@ -14,9 +14,9 @@ void setup()
 int main(){
     setup();
     while(1){
-        led_control(GREEN, ON);
+        led_control(ORANGE, ON);
         delay(1000);
-        led_control(GREEN, OFF);
+        led_control(ORANGE, OFF);
         delay(1000);
     }
     return 0;

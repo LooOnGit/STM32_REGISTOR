@@ -9,3 +9,6 @@ arm-none-eabi-gcc -x assembler-with-cpp -c startup_stm32f411vetx.s -mcpu=cortex-
 
 #link all file in build
 arm-none-eabi-gcc build/*.o -mcpu=cortex-m4 -T"STM32F411VETX_RAM.ld" -Wl,-Map="file.map" -Wl,--gc-sections -static -o build/blink_led.elf
+
+
+ST-LINK_CLI -c SWD -P build/blink_led.hex
