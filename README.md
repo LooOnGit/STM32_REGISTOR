@@ -126,6 +126,42 @@ Tài liệu này hướng dẫn lập trình giao tiếp I2C trên vi điều kh
    - ACK = 0: Xác nhận đã nhận
    - NACK = 1: Không xác nhận/Kết thúc đọc
 
+### 🔄 Chi Tiết Về ACK/NACK
+
+Acknowledge bit là một phần quan trọng trong giao thức I2C, được sử dụng để xác nhận việc truyền nhận dữ liệu thành công.
+
+1. **Định Nghĩa**:
+   - ACK (0): Xác nhận đã nhận dữ liệu
+   - NACK (1): Không xác nhận/từ chối nhận
+   - Do bên nhận (receiver) gửi sau mỗi byte
+
+2. **Đặc Điểm**:
+   - I2C mặc định ở trạng thái HIGH (idle)
+   - Không có phản hồi = NACK
+   - ACK bit được truyền sau mỗi byte dữ liệu
+   - Receiver kéo đường SDA xuống LOW để báo ACK
+
+3. **Thời Điểm Sử Dụng**:
+   ```
+   [Slave Addr][R/W][ACK][Data Byte][ACK]...[Data Byte][ACK/NACK][STOP]
+   ```
+   - Sau địa chỉ slave
+   - Sau mỗi byte dữ liệu
+   - Byte cuối có thể kết thúc bằng NACK
+
+4. **Ý Nghĩa ACK**:
+   - **Sau địa chỉ slave**:
+     + Xác nhận slave tồn tại trên bus
+     + Slave sẵn sàng nhận/gửi dữ liệu
+     + Phụ thuộc vào bit R/W
+
+   - **Sau byte dữ liệu**:
+     + Xác nhận đã nhận byte thành công
+     + Sẵn sàng nhận byte tiếp theo
+     + NACK có thể dùng để kết thúc truyền
+
+![I2C ACK](image-10.png)
+
 5. **Byte Dữ Liệu (8 bit)**
    - Truyền từ MSB → LSB
    - SDA chỉ được thay đổi khi SCL = LOW
@@ -473,7 +509,22 @@ Việc tuân thủ các quy tắc timing này là rất quan trọng để:
 - 🔄 Tạo pull request
 - 📢 Chia sẻ kinh nghiệm
 
-## 📄 Giấy Phép
-Dự án này được phân phối dưới Giấy phép MIT - Xem file `LICENSE` để biết thêm chi tiết.
+### ⚡ Các Chế Độ Tốc Độ (Speed Modes)
+
+I2C có thể hoạt động ở nhiều mức tốc độ khác nhau, được gọi là các "mode". Mỗi mode có đặc điểm và ứng dụng riêng.
+
+#### 1. Các Mode Cơ Bản
+| Chế Độ | Tốc Độ | Đặc Điểm |
+|:-------|:-------|:---------|
+| Standard Mode | 100 kbps | Mode chuẩn, phổ biến nhất |
+| Fast Mode | 400 kbps | Tương thích ngược với Standard |
+| Fast Mode Plus | 1 Mbps | Cần điện trở pull-up thích hợp |
+
+#### 2. Các Mode Tốc Độ Cao
+| Chế Độ | Tốc Độ | Đặc Điểm Đặc Biệt |
+|:-------|:-------|:------------------|
+| High Speed Mode | 3.4 Mbps | - Tương thích ngược với mode chậm hơn<br>- Cần chuỗi khởi tạo đặc biệt để chuyển sang HS<br>- Điện trở pull-up riêng cho HS |
+| Ultra Fast Mode | 5 Mbps | - Chỉ hỗ trợ truyền một chiều (write-only)<br>- Yêu cầu sửa đổi giao thức và frame<br>- Không tương thích với các mode khác |
+
 
 
