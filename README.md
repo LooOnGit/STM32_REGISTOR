@@ -1,45 +1,53 @@
 # 🔧 STM32F411 I2C Programming with Registers
 
-## 📝 Overview
-This repository contains examples and documentation for programming the I2C peripheral on STM32F411 microcontroller using direct register manipulation (without HAL library).
+## 📋 Mục Lục
+- [📝 Tổng Quan](#-tổng-quan)
+- [🛠️ Yêu Cầu Phần Cứng](#️-yêu-cầu-phần-cứng)
+- [📡 Lý Thuyết I2C](#-lý-thuyết-i2c)
+- [💻 Lập Trình](#-lập-trình)
+- [🔍 Xử Lý Lỗi](#-xử-lý-lỗi)
+- [📚 Tài Liệu Tham Khảo](#-tài-liệu-tham-khảo)
 
-## ⚡ Features
-- Direct register programming for I2C
-- No HAL dependency
-- Optimized for STM32F411 microcontroller
-- Clear examples and documentation
+## 📝 Tổng Quan
+Tài liệu này hướng dẫn lập trình giao tiếp I2C trên vi điều khiển STM32F411 sử dụng thanh ghi (không sử dụng thư viện HAL).
 
-## 🛠️ Hardware Requirements
-- STM32F411 Development Board
-- I2C compatible sensors/devices
-- Connection wires
-- Pull-up resistors (typically 4.7kΩ) for SCL and SDA lines
+## 🛠️ Yêu Cầu Phần Cứng
+### 📌 Thiết Bị
+- Vi điều khiển STM32F411 ⚡
+- Các cảm biến/thiết bị I2C 🔌
+- Dây nối 🔗
+- Điện trở pull-up (thường là 4.7kΩ) ⚡
 
-## 📚 Lý Thuyết I2C (I2C Theory)
+### 🔌 Cấu Hình Chân
+| Tín Hiệu | Chân GPIO | Chức Năng | Cấu Hình |
+|:--------:|:---------:|:---------:|:---------:|
+| SCL1     | PB6       | Clock     | AF4, Open-Drain |
+| SDA1     | PB7       | Data      | AF4, Open-Drain |
+| SCL2     | PB10      | Clock     | AF4, Open-Drain |
+| SDA2     | PB3       | Data      | AF4, Open-Drain |
 
-### 1. Giới Thiệu
-I2C (Inter-Integrated Circuit) là một giao thức truyền thông nối tiếp được phát triển bởi Philips Semiconductor (nay là NXP) vào năm 1982. Đây là một giao thức rất phổ biến và được sử dụng chủ yếu cho truyền thông dữ liệu khoảng cách ngắn.
+## 📡 Lý Thuyết I2C
 
-Đặc điểm nổi bật:
-- Sử dụng chỉ 2 dây để truyền thông
-- Giao thức đồng bộ master-slave
-- Truyền thông hai chiều (bidirectional)
-- Chế độ half-duplex (một chiều tại một thời điểm)
-- Hỗ trợ nhiều tốc độ truyền khác nhau
+### 🌟 Đặc Điểm Chính
+- **Giao thức**: Truyền thông nối tiếp đồng bộ
+- **Phát triển**: Philips Semiconductor (NXP), 1982
+- **Ứng dụng**: Truyền thông khoảng cách ngắn
+- **Tín hiệu**: SCL (Clock) và SDA (Data)
 
-### 2. Cấu Trúc Phần Cứng
-1. **Đường Truyền**:
-   - **SCL (Serial Clock)**: Đường tín hiệu xung nhịp do Master điều khiển
-   - **SDA (Serial Data)**: Đường tín hiệu dữ liệu hai chiều
-   - Cả hai đường đều là open-drain và cần điện trở pull-up
+### 🚀 Ưu Điểm
+- ✨ Thiết kế phần cứng đơn giản
+- 🔗 Hỗ trợ nhiều thiết bị (multi-slave)
+- 🔄 Truyền thông hai chiều
+- ✅ Có cơ chế kiểm tra lỗi
 
-2. **Các Thiết Bị**:
-   - **Master**: Khởi tạo truyền thông và tạo xung clock
-   - **Slave**: Đáp ứng khi được Master gọi
-   - Có thể có nhiều Master và nhiều Slave trên cùng một bus
-   - Mỗi Slave có một địa chỉ duy nhất
+### ⚡ Tốc Độ Truyền
+| Chế độ | Tốc độ | Ứng dụng |
+|:------:|:------:|:--------:|
+| Standard | 100kHz | Thông thường |
+| Fast | 400kHz | Tốc độ cao |
+| Fast Plus | 1MHz | Hiệu năng cao |
 
-### 3. Cấu Trúc Frame và Timing
+### 🔄 Cấu Trúc Frame và Timing
 
 #### 3.1 Cấu Trúc Frame Cơ Bản
 ```
@@ -50,18 +58,62 @@ I2C (Inter-Integrated Circuit) là một giao thức truyền thông nối tiế
 #### 3.2 Chi Tiết Từng Phần
 
 1. **Điều Kiện START (S)**
-   - SDA chuyển từ HIGH → LOW khi SCL = HIGH
-   - Đánh dấu bắt đầu truyền thông
-   - Master có quyền điều khiển độc quyền bus sau START
+   - **Trạng thái Idle**:
+     - Ở trạng thái nghỉ, cả SDA và SCL đều ở mức HIGH
+     - Bus đang ở trạng thái tự do, sẵn sàng cho truyền thông
+   
+   - **Quá trình tạo điều kiện START**:
+     - Bước 1: Master kéo SDA xuống LOW (trong khi SCL vẫn HIGH)
+     - Bước 2: Master kéo SCL xuống LOW
+     - Quá trình này được gọi là "chiếm giữ bus" (claiming the bus)
+   
+   - **Ý nghĩa**:
+     - Đánh dấu bắt đầu truyền thông
+     - Node thực hiện điều kiện START trở thành Master
+     - Ngăn chặn các node khác chiếm quyền điều khiển bus
+     - Giảm thiểu nguy cơ xung đột trên bus
+   
+   - **Sau điều kiện START**:
+     - Master có quyền điều khiển độc quyền bus
+     - Master bắt đầu tạo xung clock trên đường SCL
+     - Các node khác phải đợi đến khi có điều kiện STOP
 
 2. **Địa Chỉ Slave (7 bit)**
-   - Truyền từ MSB → LSB
-   - Bit 7 (MSB) được gửi đầu tiên
-   - Ví dụ địa chỉ 0x48 = 0b1001000:
+   - **Yêu Cầu Cơ Bản**:
+     - Mỗi thiết bị trên bus I2C phải có địa chỉ duy nhất
+     - Địa chỉ được cố định và không thay đổi trong quá trình hoạt động
+     - Truyền từ MSB (A6) đến LSB (A0)
+
+   - **Định Dạng Địa Chỉ**:
+     - Địa chỉ 7-bit là chuẩn phổ biến nhất: `A6 A5 A4 A3 A2 A1 A0`
+     - Địa chỉ 10-bit cũng được hỗ trợ nhưng ít phổ biến hơn
+     - Bit thứ 8 (R/W) được thêm vào sau địa chỉ để chỉ định hướng truyền
+
+   - **Cấu Hình Địa Chỉ**:
+     1. **Hard-coded**: 
+        - Địa chỉ được nhà sản xuất cố định
+        - Không thể thay đổi
+        - Ví dụ: MPU6050 có địa chỉ mặc định là 0x68
+
+     2. **Configurable**: 
+        - Địa chỉ có thể cấu hình một phần thông qua:
+          + Chân địa chỉ bên ngoài (A0, A1, A2)
+          + Jumper selection
+        - Ví dụ: `0101A2A1A0` - 4 bit đầu cố định, 3 bit cuối có thể cấu hình
+        - Cho phép nhiều cảm biến cùng loại trên một bus
+
+   - **Ví Dụ Địa Chỉ Phổ Biến**:
      ```
-     Bit 7 → Bit 6 → Bit 5 → Bit 4 → Bit 3 → Bit 2 → Bit 1
-       1   →   0   →   0   →   1   →   0   →   0   →   0
+     0x48 (0b1001000) - Cảm biến nhiệt độ ADS1115
+     0x68 (0b1101000) - Cảm biến IMU MPU6050
+     0x76 (0b1110110) - Cảm biến áp suất BMP280
+     0x3C (0b0111100) - Màn hình OLED SSD1306
      ```
+
+   - **Số Lượng Thiết Bị Tối Đa**:
+     - Địa chỉ 7-bit: 128 thiết bị (2^7)
+     - Địa chỉ 10-bit: 1024 thiết bị (2^10)
+     - Giới hạn thực tế thường do điện dung bus (400pF)
 
 3. **Bit Read/Write (R/W)**
    - Bit thứ 8 sau địa chỉ
@@ -198,7 +250,7 @@ START → 0x68 → W → ACK → 0x3B → ACK → START → 0x68 → R → ACK
    - Điện áp hoạt động thông thường: 3.3V hoặc 5V
    - Chiều dài bus tối đa phụ thuộc vào điện dung bus (400pF max)
 
-## �� Pin Configuration
+## 📄 Pin Configuration
 | Pin Name | Pin Number | Function |
 |----------|------------|----------|
 | SCL1     | PB6       | I2C1 Clock |
@@ -328,31 +380,100 @@ uint8_t I2C_Read(uint8_t address) {
 }
 ```
 
-## ⚠️ Common Issues and Solutions
-1. **Bus Error (BERR)**
-   - Check pull-up resistors on SCL and SDA lines
-   - Verify correct pin configuration
-   - Check for short circuits
+## 🔍 Xử Lý Lỗi
+### ⚠️ Các Lỗi Thường Gặp
+1. **🚫 Bus Error (BERR)**
+   - *Nguyên nhân*: START/STOP không hợp lệ
+   - *Khắc phục*: Kiểm tra pull-up, giảm nhiễu
 
-2. **Acknowledge Failure (AF)**
-   - Verify slave address is correct
-   - Check if slave device is powered and connected
-   - Ensure proper timing configuration
+2. **⚡ Arbitration Lost (ARLO)**
+   - *Nguyên nhân*: Xung đột multi-master
+   - *Khắc phục*: Kiểm tra xung đột địa chỉ
 
-3. **Arbitration Lost (ARLO)**
-   - Check for multiple masters on the bus
-   - Verify proper pull-up resistor values
+3. **❌ Acknowledge Failure (AF)**
+   - *Nguyên nhân*: Slave không phản hồi
+   - *Khắc phục*: Kiểm tra địa chỉ và nguồn
 
-## 📖 References
-- [STM32F411 Reference Manual](https://www.st.com/resource/en/reference_manual/rm0383-stm32f411xce-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
-- [I2C Specification](https://www.nxp.com/docs/en/user-guide/UM10204.pdf)
+### ⏱️ Timing Requirements
+| Thông số | Giá trị @ 100kHz |
+|:--------:|:----------------:|
+| tSU;STA  | 0.6µs |
+| tHD;STA  | 0.6µs |
+| tSU;DAT  | 0.1µs |
+| tHD;DAT  | 0µs |
+| tSU;STO  | 0.6µs |
 
-## 🤝 Contributing
-Feel free to contribute to this project by:
-- Reporting bugs
-- Suggesting enhancements
-- Creating pull requests
-- Sharing your experience
+## 📚 Tài Liệu Tham Khảo
+- 📖 [STM32F411 Reference Manual](https://www.st.com/resource/en/reference_manual/rm0383-stm32f411xce-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
+- 📑 [I2C Specification](https://www.nxp.com/docs/en/user-guide/UM10204.pdf)
+- 🎥 [Video Hướng Dẫn I2C STM32](https://www.youtube.com/watch?v=CAvawEcxoPU)
 
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 🤝 Đóng Góp
+- 🐛 Báo cáo lỗi
+- 💡 Đề xuất cải tiến
+- 🔄 Tạo pull request
+- 📢 Chia sẻ kinh nghiệm
+
+### 🕒 Mối Quan Hệ Timing giữa SDA và SCL
+
+Để đảm bảo truyền thông I2C hoạt động chính xác, mối quan hệ timing giữa SDA và SCL cần tuân thủ các quy tắc sau:
+
+1. **Quy Tắc Cơ Bản**:
+   - SDA không được thay đổi khi SCL ở mức cao (HIGH)
+   - SDA chỉ được phép thay đổi khi SCL ở mức thấp (LOW)
+   - Ngoại lệ: điều kiện START và STOP
+
+2. **Trong Quá Trình Truyền Dữ Liệu**:
+   ```
+   SDA ----[1]----[1]----[0]----
+            |      |      |
+   SCL _____|‾‾‾‾‾|_____|‾‾‾‾‾
+   ```
+   - SDA chỉ thay đổi khi SCL = LOW
+   - SDA phải giữ ổn định khi SCL = HIGH
+   - Dữ liệu được lấy mẫu tại cạnh lên của SCL
+
+3. **Điều Kiện START/STOP**:
+   ```
+   START                STOP
+   
+   SDA ‾‾‾\            SDA ___/‾‾‾
+           \                /
+   SCL ‾‾‾‾‾\___      SCL ‾‾‾‾‾‾‾‾
+   ```
+   - START: SDA chuyển từ HIGH → LOW khi SCL = HIGH
+   - STOP: SDA chuyển từ LOW → HIGH khi SCL = HIGH
+
+4. **Timing Diagram Chi Tiết**:
+   ```
+         Start         Data           Stop
+         |            |              |
+   SDA ‾‾‾\__________|‾‾‾‾‾‾\______/‾‾‾
+            \         |       \    /
+   SCL ‾‾‾‾‾‾\___/‾‾‾\___/‾‾‾\__/‾‾‾‾
+   ```
+
+5. **Quy Tắc Quan Trọng**:
+   - SDA không thay đổi giữa cạnh lên và xuống của SCL
+   - Mọi thay đổi SDA (trừ START/STOP) phải thực hiện khi SCL = LOW
+   - Điều kiện START/STOP là ngoại lệ duy nhất
+   - Thời gian setup và hold phải được đảm bảo
+
+![I2C Timing](image-1.png)
+
+Việc tuân thủ các quy tắc timing này là rất quan trọng để:
+- Tránh lỗi truyền thông
+- Đảm bảo tính toàn vẹn dữ liệu
+- Ngăn ngừa điều kiện START/STOP giả
+- Tăng độ tin cậy của hệ thống
+
+## 🤝 Đóng Góp
+- 🐛 Báo cáo lỗi
+- 💡 Đề xuất cải tiến
+- 🔄 Tạo pull request
+- 📢 Chia sẻ kinh nghiệm
+
+## 📄 Giấy Phép
+Dự án này được phân phối dưới Giấy phép MIT - Xem file `LICENSE` để biết thêm chi tiết.
+
+
