@@ -1199,3 +1199,5 @@
 2025-06-29 16:48:05,935 [INFO] ProjectBuilder:3107 - Time for Copy CMSIS : 0mS.
 2025-06-29 17:54:22,037 [INFO] WebApp:189 - Connection lost
 2025-06-29 17:54:22,200 [INFO] WebApp:186 - Connection restablished
+2025-06-29 18:11:27,266 [ERROR] LogOutputStream:75 - [STDERR_REDIRECT] 
+2025-06-29 18:11:27,267 [ERROR] LogOutputStream:75 - [STDERR_REDIRECT] 
