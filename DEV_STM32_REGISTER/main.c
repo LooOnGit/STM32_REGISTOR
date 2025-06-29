@@ -2,6 +2,7 @@
 #include "led.h"
 #include "delay.h"
 #include "clock.h"
+#include "pwm.h"
 
 void SystemInit ();
 void setup()
@@ -9,15 +10,21 @@ void setup()
     led_init();
     delay_init();
     clock_init();
+    pwm_init();
 }
 
 int main(){
     setup();
+    int cnt = 0;
     while(1){
         led_control(ORANGE, ON);
-        delay(1000);
-        led_control(ORANGE, OFF);
-        delay(1000);
+        // delay(1000);
+        // led_control(ORANGE, OFF);
+        // delay(1000);    
+        if(++cnt > 100)
+            cnt = 0;
+        pwm_pulse_crtl(cnt);
+        delay(10);
     }
     return 0;
 }

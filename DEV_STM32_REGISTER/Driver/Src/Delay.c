@@ -11,9 +11,6 @@
 
 uint32_t tim1_cnt = 0;
 
-
-
-
 #if (DELAY_SRC  == TIMER1)
 
 void TIM1_UP_TIM10_IRQHandler()
@@ -36,8 +33,6 @@ void delay(uint32_t sec)
     while( (uint32_t)(tim1_cnt - current_cnt) < sec );
 }
 
-
-
 void delay_init()
 {
 #if (DELAY_SRC == TIMER1)
@@ -51,7 +46,7 @@ void delay_init()
    uint16_t* DIER = (uint16_t*)(0x4001000c);
    uint16_t* CR1 = (uint16_t*)(0x40010000);
    *ARR = 1000;
-   *PSC = 100 - 1;
+   *PSC = 16 - 1;
 
 
    *DIER |= 1<<0;//enable interrupt
