@@ -3,6 +3,8 @@
 #include "delay.h"
 #include "clock.h"
 #include "pwm.h"
+#include "SPI.h"
+#include "i2c.h"
 
 void SystemInit ();
 void setup()
@@ -11,6 +13,11 @@ void setup()
     delay_init();
     clock_init();
     pwm_init();
+    SPI_init();
+    uint8_t id = LSM303_Read_ID();
+    LSM303_Init();
+    I2C1_LSM303_init();
+    I2C1_LSM303_ReadID();
 }
 
 int main(){

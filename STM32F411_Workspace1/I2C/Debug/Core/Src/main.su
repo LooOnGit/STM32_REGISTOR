@@ -1,0 +1,16 @@
+../Core/Src/main.c:60:6:SPI_init	40	static
+../Core/Src/main.c:83:6:SPI_Write	32	static
+../Core/Src/main.c:99:9:SPI_Read	24	static
+../Core/Src/main.c:116:6:LSM303_Active	16	static
+../Core/Src/main.c:122:6:LSM303_Inactive	16	static
+../Core/Src/main.c:128:6:LSM303_Init	8	static
+../Core/Src/main.c:147:9:LSM303_Read_X	16	static
+../Core/Src/main.c:164:10:LSM303_Read_Y	16	static
+../Core/Src/main.c:179:10:LSM303_Read_Z	16	static
+../Core/Src/main.c:197:9:LSM303_Read_ID	16	static
+../Core/Src/main.c:207:6:I2C1_LSM303_init	48	static
+../Core/Src/main.c:237:6:I2C1_LSM303_ReadID	40	static
+../Core/Src/main.c:282:5:main	16	static
+../Core/Src/main.c:335:6:SystemClock_Config	88	static
+../Core/Src/main.c:377:13:MX_GPIO_Init	16	static
+../Core/Src/main.c:398:6:Error_Handler	4	static,ignoring_inline_asm

@@ -1,0 +1,16 @@
+../Core/Src/main.c:60:6:SPI_init	1
+../Core/Src/main.c:83:6:SPI_Write	5
+../Core/Src/main.c:99:9:SPI_Read	5
+../Core/Src/main.c:116:6:LSM303_Active	1
+../Core/Src/main.c:122:6:LSM303_Inactive	1
+../Core/Src/main.c:128:6:LSM303_Init	1
+../Core/Src/main.c:147:9:LSM303_Read_X	2
+../Core/Src/main.c:164:10:LSM303_Read_Y	2
+../Core/Src/main.c:179:10:LSM303_Read_Z	2
+../Core/Src/main.c:197:9:LSM303_Read_ID	1
+../Core/Src/main.c:207:6:I2C1_LSM303_init	1
+../Core/Src/main.c:237:6:I2C1_LSM303_ReadID	8
+../Core/Src/main.c:282:5:main	1
+../Core/Src/main.c:335:6:SystemClock_Config	3
+../Core/Src/main.c:377:13:MX_GPIO_Init	1
+../Core/Src/main.c:398:6:Error_Handler	1
