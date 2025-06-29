@@ -1,4 +1,4 @@
-# 🎯 STM32 Register Programming Project
+# 🎯 STM32 Register Programming Project (Makefile)
 
 <div align="center">
   <img src="https://www.st.com/content/ccc/site/homepage/stcom_homepage_2020_q4/images/st-site-image01.jpg" width="400">
