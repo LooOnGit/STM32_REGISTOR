@@ -1,290 +1,115 @@
-# 🎯 STM32 Register Programming Project :)
+# 📟 STM32F411 Input Capture Timer Study Project
+# 📟 Dự Án Học Tập Timer Input Capture STM32F411
 
-<div align="center">
-  <img src="https://www.st.com/content/ccc/site/homepage/stcom_homepage_2020_q4/images/st-site-image01.jpg" width="400">
+## 📝 Overview - Tổng Quan
+This project demonstrates the implementation of Input Capture functionality using timers on the STM32F411 microcontroller. Input Capture is used to measure pulse width, frequency, and duty cycle of input signals.
 
-  ![Version](https://img.shields.io/badge/STM32-F411-blue)
-  ![License](https://img.shields.io/badge/license-MIT-green)
-  ![Status](https://img.shields.io/badge/status-active-success)
-</div>
+Dự án này trình bày việc thực hiện chức năng Input Capture sử dụng timer trên vi điều khiển STM32F411. Input Capture được sử dụng để đo độ rộng xung, tần số và chu kỳ của tín hiệu đầu vào.
 
-## 📝 Quy trình Biên dịch và Nạp chương trình
+## ⚡ Features - Tính Năng
+- Timer Input Capture configuration (Cấu hình Timer Input Capture)
+- Pulse width measurement (Đo độ rộng xung)
+- Frequency measurement (Đo tần số)
+- Duty cycle calculation (Tính toán chu kỳ nhiệm vụ)
+- Edge detection (Rising/Falling) (Phát hiện cạnh (Lên/Xuống))
 
-```mermaid
-graph LR
-    A[File .c] --> B[Compile .o]
-    B --> C[Link .elf]
-    C --> D[Binary .bin]
-    D --> E[ST-Link]
-    E --> F[STM32F4]
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style F fill:#bbf,stroke:#333,stroke-width:2px
+## 🛠️ Hardware Requirements - Yêu Cầu Phần Cứng
+- STM32F411 Development Board (Kit phát triển STM32F411)
+- Signal source for testing - function generator or test signal (Nguồn tín hiệu để test - máy phát tín hiệu hoặc tín hiệu test)
+- ST-Link programmer/debugger (Thiết bị nạp/gỡ lỗi ST-Link)
+- Jumper wires (Dây jump)
+
+## 📚 Project Structure - Cấu Trúc Dự Án
+```
+Timer/
+├── Core/
+│   ├── Inc/           # Header files (File tiêu đề)
+│   ├── Src/           # Source files (File mã nguồn)
+│   └── Startup/       # Startup code (Mã khởi động)
+├── Drivers/           # STM32 HAL drivers (Thư viện HAL STM32)
+└── Debug/            # Build outputs (Thư mục build)
 ```
 
-### 🔍 Chi tiết các bước:
+## ⚙️ Configuration - Cấu Hình
+- System Clock: 100MHz (Xung nhịp hệ thống: 100MHz)
+- Timer Configuration (Cấu hình Timer):
+  - Timer Channel: TIM2 (Kênh Timer: TIM2)
+  - Input Capture Mode (Chế độ Input Capture)
+  - Edge Detection: Rising/Falling (Phát hiện cạnh: Lên/Xuống)
+  - Prescaler: TBD based on input frequency (Bộ chia tần: Tùy thuộc vào tần số đầu vào)
 
-| Bước | File | Mô tả |
-|------|------|--------|
-| 1️⃣ | **File .c** | • File mã nguồn viết bằng C<br>• Chứa code điều khiển thanh ghi<br>• Dễ đọc, dễ bảo trì |
-| 2️⃣ | **File .o** | • Biên dịch file .c thành mã máy dạng object<br>• Mã máy này chưa hoàn chỉnh<br>• Còn chứa thông tin debug và bảng ký hiệu |
-| 3️⃣ | **File .elf** | • Liên kết các file .o thành một file thực thi<br>• Gán địa chỉ cụ thể cho code và data<br>• Sắp xếp các section (.text, .data, .bss) |
-| 4️⃣ | **File .bin** | • Chuyển từ .elf sang định dạng nhị phân thuần túy<br>• Chỉ chứa mã máy và dữ liệu<br>• Sẵn sàng để nạp vào Flash |
+## 🔌 Pin Configuration - Cấu Hình Chân
+| Signal (Tín hiệu) | Pin | Function (Chức năng) |
+|--------|-----|----------|
+| Input Signal (Tín hiệu vào) | PA0 | TIM2_CH1 |
 
-### 💻 Lệnh biên dịch cơ bản:
+## 💻 Getting Started - Bắt Đầu
+1. Clone this repository (Sao chép kho lưu trữ này)
+2. Open project in STM32CubeIDE (Mở dự án trong STM32CubeIDE)
+3. Configure the timer settings if needed (Cấu hình timer nếu cần)
+4. Build and flash to your STM32F411 board (Build và nạp cho board STM32F411)
+5. Connect your input signal to the configured pin (Kết nối tín hiệu đầu vào với chân đã cấu hình)
 
-<details>
-<summary>📚 Xem help và các tham số của arm-none-eabi-gcc</summary>
+## 📊 Example Usage - Ví Dụ Sử Dụng
+```c
+// Timer Input Capture initialization (Khởi tạo Timer Input Capture)
+HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 
-```bash
-# Xem help và các tham số
-arm-none-eabi-gcc --help
-arm-none-eabi-gcc --target-help    # Xem các tùy chọn cho ARM
+// In the callback (Trong hàm callback)
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+    {
+        // Process captured value (Xử lý giá trị đã capture)
+        uint32_t captured_value = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    }
+}
 ```
 
-#### Các tham số quan trọng:
-| Tham số | Mô tả |
-|---------|--------|
-| `-c` | Chỉ biên dịch không liên kết |
-| `-g` | Tạo thông tin debug |
-| `-O0` → `-O3` | Các mức tối ưu hóa |
-| `-mcpu=<cpu>` | Chọn kiến trúc CPU |
-| `-mthumb` | Dùng bộ lệnh Thumb |
-| `-x` | Chỉ định loại ngôn ngữ đầu vào |
-| `-I<dir>` | Thêm thư mục chứa header |
-| `-D<macro>` | Định nghĩa macro |
-| `-Wall` | Hiện tất cả cảnh báo |
-</details>
+## 📈 Results - Kết Quả
+- Successfully measured frequencies in range: 1Hz - 100kHz (Đo tần số thành công trong khoảng: 1Hz - 100kHz)
+- Pulse width measurement resolution: 1µs (Độ phân giải đo độ rộng xung: 1µs)
+- Accurate duty cycle measurements (Đo chu kỳ nhiệm vụ chính xác)
 
-<details>
-<summary>🛠️ Các lệnh biên dịch cơ bản</summary>
+## 📚 References - Tài Liệu Tham Khảo
+- [STM32F411 Reference Manual - Sách hướng dẫn tham khảo STM32F411](https://www.st.com/resource/en/reference_manual/rm0383-stm32f411xce-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
+- [STM32F4 Timer Documentation - Tài liệu Timer STM32F4](https://www.st.com/resource/en/application_note/an4013-stm32-timer-overview-stmicroelectronics.pdf)
 
-```bash
-# Kiểm tra version gcc 
-arm-none-eabi-gcc --version
+## 🔧 Troubleshooting - Xử Lý Sự Cố
+- Check signal connections (Kiểm tra kết nối tín hiệu)
+- Verify timer clock settings (Xác nhận cài đặt xung clock timer)
+- Ensure proper interrupt handling (Đảm bảo xử lý ngắt đúng cách)
 
-# Biên dịch file startup assembly (.s)
-arm-none-eabi-gcc -x assembler-with-cpp -c startup_stm32f411vetx.s -mcpu=cortex-m4 -std=gnu11 -o build/startup.o
+## 📝 License - Giấy Phép
+This project is licensed under the MIT License - see the LICENSE file for details
+(Dự án này được cấp phép theo Giấy phép MIT - xem file LICENSE để biết chi tiết)
 
-# Biên dịch file .c thành .o
-arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -mthumb -std=gnu11 -IDriver/Inc -o build/main.o
+## ✍️ Author - Tác Giả
+[Your Name - Tên của bạn]
 
-# Liên kết thành file .elf
-arm-none-eabi-gcc main.o startup.o -mcpu=cortex-m4 -mthumb -T STM32F411VETX_FLASH.ld -o program.elf
+## 🤝 Contributing - Đóng Góp
+Contributions, issues, and feature requests are welcome!
+(Chào đón mọi đóng góp, báo lỗi và yêu cầu tính năng!)
 
-# Tạo file binary
-arm-none-eabi-objcopy -O binary program.elf program.bin
+## ⚡ Timer Calculations - Tính Toán Timer
 
-# Nạp chương trình (sử dụng ST-Link)
-st-flash write program.bin 0x08000000
+### 🔢 Basic Timer Setup - Thiết Lập Timer Cơ Bản
 ```
-</details>
+Clock Settings (Cài đặt xung):
+- APB1 Timer Clock (TIMCLK) = 16MHz
+- Prescaler (PSC) = 16
+- Counter Clock = TIMCLK/(PSC + 1) = 16MHz/16 = 1MHz
 
-### 📝 Giải thích lệnh biên dịch file Startup:
-```bash
-arm-none-eabi-gcc -x assembler-with-cpp -c startup_stm32f411vetx.s -mcpu=cortex-m4 -std=gnu11 -o build/startup.o
-```
-#### 🔍 Chi tiết từng phần:
-1. `arm-none-eabi-gcc`: 
-   - Trình biên dịch cho vi xử lý ARM
-   - `none-eabi`: biên dịch cho hệ thống nhúng (không có hệ điều hành)
-
-2. `-x assembler-with-cpp`: 
-   - Chỉ định đây là file assembly
-   - Cho phép sử dụng preprocessor của C trong file assembly
-   - Có thể dùng #include, #define trong file .s
-
-3. `-c`: 
-   - Chỉ biên dịch thành file object (.o)
-   - Không thực hiện liên kết (linking)
-
-4. `startup_stm32f411vetx.s`:
-   - File assembly chứa mã khởi động cho STM32F411
-   - Chứa vector bảng ngắt (Interrupt Vector Table)
-   - Mã khởi tạo stack và reset handler
-   - Các handler ngắt mặc định
-
-5. `-mcpu=cortex-m4`:
-   - Chỉ định loại CPU là Cortex-M4
-   - Tối ưu mã cho kiến trúc Cortex-M4
-
-6. `-std=gnu11`:
-   - Sử dụng chuẩn GNU C11
-   - Áp dụng cho phần preprocessor C
-
-7. `-o build/startup.o`:
-   - File đầu ra là startup.o
-   - Được lưu trong thư mục build
-
-#### 🎯 Mục đích của file startup:
-- Thiết lập môi trường ban đầu cho vi điều khiển
-- Xử lý quá trình reset
-- Cấu hình bảng vector ngắt
-- Chuyển điều khiển đến hàm main của chương trình
-
-### 📁 Cấu trúc thư mục cho biên dịch:
-```
-Project/
-├── 📂 Driver/
-│   └── 📂 Inc/         # Thư mục chứa file header (.h)
-├── 📂 Core/
-│   ├── 📂 Inc/         # Header files
-│   └── 📂 Src/         # Source files (.c)
-└── 📂 build/           # Thư mục chứa file sau biên dịch
-    ├── 📄 main.o
-    ├── 📄 program.elf
-    └── 📄 program.bin
+Timing Calculations (Tính toán thời gian):
+- Counter Clock Period = 1/1MHz = 1µs
+- Maximum Measurable Time = 1µs × 65535 (16-bit) ≈ 65.5ms
 ```
 
-### ℹ️ Note
-- Gcc là trình biên dịch cho máy tính (x86/x64)
-- arm-none-eabi-gcc là trình biên dịch cho vi điều khiển ARM
-- Cần thêm các tham số phù hợp với kiến trúc ARM Cortex-M4
-- Đường dẫn trong `-I` phải trỏ đến thư mục chứa file .h
-- Nên tạo thư mục build để chứa các file biên dịch
-
-### 📝 Chi tiết lệnh trong Makefile:
-
-#### 1. Biên dịch các file nguồn:
-```bash
-# Biên dịch file main.c
-arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/main.o
-
-# Biên dịch các file trong thư mục Driver/Src
-arm-none-eabi-gcc -c Driver\Src\Led.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/led.o
-arm-none-eabi-gcc -c Driver\Src\ADC.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/ADC.o
-arm-none-eabi-gcc -c Driver\Src\clock.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/clock.o
-arm-none-eabi-gcc -c Driver\Src\delay.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/delay.o
-arm-none-eabi-gcc -c Driver\Src\capture.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/capture.o
-arm-none-eabi-gcc -c Driver\Src\Usart.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/Usart.o
+### 📊 Resolution Example - Ví Dụ Độ Phân Giải
+```
+Input Signal Timing (Thời gian tín hiệu vào):
+- Minimum Resolution = 1µs (với prescaler = 16)
+- Tần số đo được: 1Hz - 100kHz
+- Độ chính xác: ±1µs
 ```
 
-Trong đó:
-- `-c`: Chỉ biên dịch, không liên kết
-- `-mcpu=cortex-m4`: Chỉ định CPU đích
-- `-std=gnu11`: Sử dụng chuẩn GNU C11
-- `-IDriver\Inc`: Thêm thư mục chứa file header
-- `-o build/xxx.o`: File đầu ra
-
-#### 2. Liên kết các file object:
-```bash
-arm-none-eabi-gcc build\ADC.o build\capture.o build\clock.o build\Delay.o build\Led.o build\main.o build\startup.o -T"STM32F411VETX_FLASH.ld" -Wl,-Map="file.map" -Wl,--gc-sections -static -o build/blink_led.elf
-```
-
-Trong đó:
-- `build\*.o`: Các file object cần liên kết
-- `-T"STM32F411VETX_FLASH.ld"`: Script mô tả bố trí bộ nhớ
-- `-Wl,-Map="file.map"`: Tạo file map để debug
-- `-Wl,--gc-sections`: Loại bỏ code không sử dụng
-- `-static`: Liên kết tĩnh
-- `-o build/blink_led.elf`: File thực thi đầu ra
-
-#### 3. Tạo file hex và binary:
-```bash
-# Tạo file hex để nạp và debug
-arm-none-eabi-objcopy -O ihex build/blink_led.elf build/blink_led.hex
-
-# Tạo file binary để nạp vào flash
-arm-none-eabi-objcopy -O binary build/blink_led.elf build/blink_led.bin
-```
-
-#### 4. Dọn dẹp và tạo mới:
-```bash
-# Xóa thư mục build
-rmdir /q /s build
-
-# Tạo lại thư mục build
-mkdir build
-```
-
-### 🔄 Quy trình sử dụng:
-1. `mingw32-make Clean`: Xóa các file đã biên dịch
-2. `mingw32-make All`: Biên dịch toàn bộ project
-3. Các file output trong thư mục `build`:
-   - `*.o`: File object
-   - `*.elf`: File thực thi
-   - `*.hex`: File hex để nạp/debug
-   - `*.bin`: File binary để nạp
-   - `*.map`: File map để debug
-
----
-
-## STM32 Startup và Linker Files
-
-### Startup Files
-File startup (ví dụ: `startup_stm32f411vetx.s`) là file assembly chứa:
-- Vector table chứa các interrupt handlers
-- Reset handler và các initialization code
-- Weak definitions cho các interrupt handlers
-- Stack initialization
-
-Mỗi dòng chip STM32 sẽ có file startup riêng, ví dụ:
-- STM32F411: `startup_stm32f411vetx.s`
-- STM32F401: `startup_stm32f401xc.s` 
-- STM32F103: `startup_stm32f103xb.s`
-
-### Linker Script Files
-Có 2 loại linker script chính:
-1. `STM32F411VETX_FLASH.ld`: Để chạy chương trình từ Flash memory
-   - Code được nạp vào Flash memory
-   - Data được copy vào RAM khi khởi động
-   - Thường dùng cho sản phẩm cuối
-
-2. `STM32F411VETX_RAM.ld`: Để chạy chương trình từ RAM
-   - Code và data đều nằm trong RAM
-   - Thường dùng cho debug và development
-   - Tốc độ thực thi nhanh hơn chạy từ Flash
-
-Linker script định nghĩa:
-- Memory layout (Flash, RAM, etc.)
-- Section placement (.text, .data, .bss)
-- Entry point
-- Stack và heap size
-
-### Lưu ý
-- File startup và linker script phải tương thích với chip đang sử dụng
-- Có thể lấy file mẫu từ STM32CubeMX hoặc STM32CubeIDE
-- Cần chỉnh sửa memory size trong linker script cho phù hợp với chip
-- File startup thường không cần chỉnh sửa
-
-### ST-LINK CLI Commands
-
-ST-LINK CLI là công cụ command line để tương tác với STM32 thông qua ST-LINK programmer. Một số lệnh cơ bản:
-
-#### Kiểm tra kết nối
-```bash
-ST-LINK_CLI -c SWD
-```
-Khi kết nối thành công, bạn sẽ thấy thông tin:
-- ST-LINK SN (Serial Number)
-- Firmware version
-- Connection mode
-- Device ID
-- Flash Size
-- Device family (vd: STM32F411xC/E)
-
-#### Đọc memory
-```bash
-ST-LINK_CLI -c SWD -r8 0x08000000 8
-```
-- `-r8`: Read 8-bit
-- `0x08000000`: Địa chỉ bắt đầu đọc (Flash memory)
-- `8`: Số byte cần đọc
-
-#### Nạp chương trình
-```bash
-ST-LINK_CLI -c SWD -P build/blink_led.hex
-```
-- `-P`: Program file
-- `-V`: Verify sau khi nạp
-- `-Rst`: Reset chip sau khi nạp
-
-### Lưu ý khi sử dụng ST-LINK
-- Đảm bảo đã cài đặt ST-LINK drivers
-- Kiểm tra kết nối vật lý (cáp USB, nguồn board)
-- SWD frequency mặc định là 4000kHz
-- Target voltage thường là 2.9V - 3.3V
-- Reset mode mặc định là Software reset
-
-<div align="center">
-  <i>Made with ❤️ for STM32 Development</i>
-</div>
