@@ -1,290 +1,213 @@
-# 🎯 STM32 Register Programming Project :)
+# Learning ADC on STM32F411 Using Register Programming
 
-<div align="center">
-  <img src="https://www.st.com/content/ccc/site/homepage/stcom_homepage_2020_q4/images/st-site-image01.jpg" width="400">
+## Overview
+STM32F411 có ADC 12-bit với tối đa 16 kênh. Repository này hướng dẫn cách lập trình ADC bằng cách thao tác trực tiếp với thanh ghi.
 
-  ![Version](https://img.shields.io/badge/STM32-F411-blue)
-  ![License](https://img.shields.io/badge/license-MIT-green)
-  ![Status](https://img.shields.io/badge/status-active-success)
-</div>
+## ADC Introduction
+- ADC (Analog to Digital Converter) là bộ chuyển đổi tín hiệu từ analog sang digital
+- Trong STM32F411 được tích hợp 2 bộ ADC 12 bit (12 bit tương ứng với giá trị tối đa mà ADC đo được là 2^12 - 1 = 4095)
+- ADC trong STM32F411 dùng để đo hiệu điện thế
+- Công thức tính điện áp đầu vào:
+```
+Vin = (Data register × Vref) / 4095
+```
+Trong đó:
+- Vin: Điện áp đầu vào cần đo
+- Data register: Giá trị đọc được từ ADC
+- Vref: Điện áp tham chiếu (thường là 3.3V hoặc 5V)
+- 4095: Giá trị tối đa của ADC 12-bit (2^12 - 1)
 
-## 📝 Quy trình Biên dịch và Nạp chương trình
+## Cấu trúc kênh ADC (Injected Channels)
 
+### Sơ đồ cấu trúc
 ```mermaid
 graph LR
-    A[File .c] --> B[Compile .o]
-    B --> C[Link .elf]
-    C --> D[Binary .bin]
-    D --> E[ST-Link]
-    E --> F[STM32F4]
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style F fill:#bbf,stroke:#333,stroke-width:2px
+    %% Input Channels
+    CH1[Channel 1] --> JSQ1
+    CH2[Channel 2] --> JSQ1
+    CH17[Channel 17] --> JSQ1
+    
+    %% JSQ Multiplexers
+    subgraph "Channel Selection"
+        JSQ1["JSQ1[4:0]"] --> CS1["Conversion source 1<br/>Temp sensor(ADC_IN16)"]
+        JSQ2["JSQ2[4:0]"] --> CS2["Conversion source 2"]
+        JSQ3["JSQ3[4:0]"] --> CS3["Conversion source 3"]
+        JSQ4["JSQ4[4:0]"] --> CS4["Conversion source 4"]
+    end
+    
+    %% JL Selection
+    subgraph "Length Selection"
+        JL["JL[1:0]<br/>00: 1 conversion<br/>01: 2 conversions<br/>10: 3 conversions<br/>11: 4 conversions"]
+    end
+    
+    %% Conversion Process
+    CS1 --> IC[("Injected<br/>Channels<br/>Up to 4")]
+    CS2 --> IC
+    CS3 --> IC
+    CS4 --> IC
+    
+    JL --> IC
+    
+    %% Results
+    IC --> JDR1["ADC_JDR 1"]
+    IC --> JDR2["ADC_JDR 2"]
+    IC --> JDR3["ADC_JDR 3"]
+    IC --> JDR4["ADC_JDR 4"]
+
+    %% Styling
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef conversion fill:#d4e6f1,stroke:#2874a6,stroke-width:2px;
+    classDef result fill:#d5f5e3,stroke:#196f3d,stroke-width:2px;
+    
+    class CS1,CS2,CS3,CS4 conversion;
+    class JDR1,JDR2,JDR3,JDR4 result;
 ```
 
-### 🔍 Chi tiết các bước:
+### Giải thích sơ đồ
+1. **Đầu vào (Input Channels)**
+   - Có thể chọn từ Channel 1 đến Channel 17
+   - Channel 16 thường được dùng cho cảm biến nhiệt độ
 
-| Bước | File | Mô tả |
-|------|------|--------|
-| 1️⃣ | **File .c** | • File mã nguồn viết bằng C<br>• Chứa code điều khiển thanh ghi<br>• Dễ đọc, dễ bảo trì |
-| 2️⃣ | **File .o** | • Biên dịch file .c thành mã máy dạng object<br>• Mã máy này chưa hoàn chỉnh<br>• Còn chứa thông tin debug và bảng ký hiệu |
-| 3️⃣ | **File .elf** | • Liên kết các file .o thành một file thực thi<br>• Gán địa chỉ cụ thể cho code và data<br>• Sắp xếp các section (.text, .data, .bss) |
-| 4️⃣ | **File .bin** | • Chuyển từ .elf sang định dạng nhị phân thuần túy<br>• Chỉ chứa mã máy và dữ liệu<br>• Sẵn sàng để nạp vào Flash |
+2. **Bộ chọn kênh (Channel Selection)**
+   - Mỗi JSQx[4:0] chọn một kênh đầu vào
+   - Có thể cấu hình tối đa 4 nguồn chuyển đổi
 
-### 💻 Lệnh biên dịch cơ bản:
+3. **Chọn độ dài (Length Selection)**
+   - JL[1:0] xác định số lượng chuyển đổi
+   - Có thể chọn từ 1 đến 4 chuyển đổi
 
-<details>
-<summary>📚 Xem help và các tham số của arm-none-eabi-gcc</summary>
+4. **Kết quả (Results)**
+   - Mỗi kết quả chuyển đổi được lưu vào một thanh ghi ADC_JDR riêng
+   - Các thanh ghi được cập nhật theo thứ tự chuyển đổi
 
-```bash
-# Xem help và các tham số
-arm-none-eabi-gcc --help
-arm-none-eabi-gcc --target-help    # Xem các tùy chọn cho ARM
+### Cấu trúc chuyển đổi
+1. **Bộ chọn kênh (JSQx[4:0])**
+   - JSQ1[4:0]: Chọn kênh cho nguồn chuyển đổi 1
+   - JSQ2[4:0]: Chọn kênh cho nguồn chuyển đổi 2
+   - JSQ3[4:0]: Chọn kênh cho nguồn chuyển đổi 3
+   - JSQ4[4:0]: Chọn kênh cho nguồn chuyển đổi 4
+
+2. **Số lượng chuyển đổi (JL[1:0])**
+   - 00: 1 lần chuyển đổi
+   - 01: 2 lần chuyển đổi
+   - 10: 3 lần chuyển đổi
+   - 11: 4 lần chuyển đổi
+
+3. **Thanh ghi dữ liệu (ADC_JDRx)**
+   - ADC_JDR1: Lưu kết quả chuyển đổi 1
+   - ADC_JDR2: Lưu kết quả chuyển đổi 2
+   - ADC_JDR3: Lưu kết quả chuyển đổi 3
+   - ADC_JDR4: Lưu kết quả chuyển đổi 4
+
+### Thứ tự chuyển đổi
+Dựa vào giá trị JL (Injected Length), ADC sẽ thực hiện chuyển đổi theo thứ tự:
+- JL = 00: Chỉ chuyển đổi JSQ1
+- JL = 01: JSQ1 >> JSQ2
+- JL = 10: JSQ1 >> JSQ2 >> JSQ3
+- JL = 11: JSQ1 >> JSQ2 >> JSQ3 >> JSQ4
+
+
+## Hardware Features
+- Độ phân giải 12-bit
+- 16 kênh ngoài
+- Phạm vi chuyển đổi: 0 đến 3.3V
+- Thời gian lấy mẫu có thể lập trình
+- Chế độ đơn, liên tục, quét hoặc không liên tục
+- Hỗ trợ DMA
+
+## So sánh Analog và Digital
+### Analog
+- Tín hiệu liên tục theo thời gian
+- Dễ bị nhiễu và suy giảm theo khoảng cách
+- Ví dụ: khi truyền 10V qua đường dây dài, do trở kháng có thể chỉ còn 8V
+- Thường dùng trong các cảm biến đo lường (nhiệt độ, áp suất, gia tốc...)
+
+### Digital
+- Tín hiệu rời rạc, biểu diễn bằng các bit 0 và 1
+- Truyền tín hiệu xa hơn, ít bị nhiễu hơn
+- Sử dụng mức điện áp chuẩn TTL:
+  + Logic 0 (LOW): 0V - 0.8V
+  + Logic 1 (HIGH): 2.4V - Vcc
+- Dễ dàng xử lý và lưu trữ bằng vi xử lý
+
+## Key Registers
+1. **ADC_CR1** (Thanh ghi điều khiển 1)
+   - Chế độ SCAN
+   - Cấu hình độ phân giải
+   - Chế độ không liên tục
+   - Các bit cho phép ngắt
+
+2. **ADC_CR2** (Thanh ghi điều khiển 2)
+   - Bật/Tắt ADC
+   - Chuyển đổi liên tục
+   - Cho phép DMA
+   - Lựa chọn kích hoạt ngoài
+   - Căn chỉnh dữ liệu
+
+3. **ADC_SQRx** (Thanh ghi chuỗi thông thường)
+   - Lựa chọn thứ tự kênh
+   - Độ dài chuỗi
+
+4. **ADC_SMPRx** (Thanh ghi thời gian lấy mẫu)
+   - Lựa chọn thời gian lấy mẫu cho kênh
+
+5. **ADC_DR** (Thanh ghi dữ liệu)
+   - Kết quả chuyển đổi
+
+## Basic Steps
+1. Bật clock cho ADC
+```c
+RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
 ```
 
-#### Các tham số quan trọng:
-| Tham số | Mô tả |
-|---------|--------|
-| `-c` | Chỉ biên dịch không liên kết |
-| `-g` | Tạo thông tin debug |
-| `-O0` → `-O3` | Các mức tối ưu hóa |
-| `-mcpu=<cpu>` | Chọn kiến trúc CPU |
-| `-mthumb` | Dùng bộ lệnh Thumb |
-| `-x` | Chỉ định loại ngôn ngữ đầu vào |
-| `-I<dir>` | Thêm thư mục chứa header |
-| `-D<macro>` | Định nghĩa macro |
-| `-Wall` | Hiện tất cả cảnh báo |
-</details>
-
-<details>
-<summary>🛠️ Các lệnh biên dịch cơ bản</summary>
-
-```bash
-# Kiểm tra version gcc 
-arm-none-eabi-gcc --version
-
-# Biên dịch file startup assembly (.s)
-arm-none-eabi-gcc -x assembler-with-cpp -c startup_stm32f411vetx.s -mcpu=cortex-m4 -std=gnu11 -o build/startup.o
-
-# Biên dịch file .c thành .o
-arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -mthumb -std=gnu11 -IDriver/Inc -o build/main.o
-
-# Liên kết thành file .elf
-arm-none-eabi-gcc main.o startup.o -mcpu=cortex-m4 -mthumb -T STM32F411VETX_FLASH.ld -o program.elf
-
-# Tạo file binary
-arm-none-eabi-objcopy -O binary program.elf program.bin
-
-# Nạp chương trình (sử dụng ST-Link)
-st-flash write program.bin 0x08000000
-```
-</details>
-
-### 📝 Giải thích lệnh biên dịch file Startup:
-```bash
-arm-none-eabi-gcc -x assembler-with-cpp -c startup_stm32f411vetx.s -mcpu=cortex-m4 -std=gnu11 -o build/startup.o
-```
-#### 🔍 Chi tiết từng phần:
-1. `arm-none-eabi-gcc`: 
-   - Trình biên dịch cho vi xử lý ARM
-   - `none-eabi`: biên dịch cho hệ thống nhúng (không có hệ điều hành)
-
-2. `-x assembler-with-cpp`: 
-   - Chỉ định đây là file assembly
-   - Cho phép sử dụng preprocessor của C trong file assembly
-   - Có thể dùng #include, #define trong file .s
-
-3. `-c`: 
-   - Chỉ biên dịch thành file object (.o)
-   - Không thực hiện liên kết (linking)
-
-4. `startup_stm32f411vetx.s`:
-   - File assembly chứa mã khởi động cho STM32F411
-   - Chứa vector bảng ngắt (Interrupt Vector Table)
-   - Mã khởi tạo stack và reset handler
-   - Các handler ngắt mặc định
-
-5. `-mcpu=cortex-m4`:
-   - Chỉ định loại CPU là Cortex-M4
-   - Tối ưu mã cho kiến trúc Cortex-M4
-
-6. `-std=gnu11`:
-   - Sử dụng chuẩn GNU C11
-   - Áp dụng cho phần preprocessor C
-
-7. `-o build/startup.o`:
-   - File đầu ra là startup.o
-   - Được lưu trong thư mục build
-
-#### 🎯 Mục đích của file startup:
-- Thiết lập môi trường ban đầu cho vi điều khiển
-- Xử lý quá trình reset
-- Cấu hình bảng vector ngắt
-- Chuyển điều khiển đến hàm main của chương trình
-
-### 📁 Cấu trúc thư mục cho biên dịch:
-```
-Project/
-├── 📂 Driver/
-│   └── 📂 Inc/         # Thư mục chứa file header (.h)
-├── 📂 Core/
-│   ├── 📂 Inc/         # Header files
-│   └── 📂 Src/         # Source files (.c)
-└── 📂 build/           # Thư mục chứa file sau biên dịch
-    ├── 📄 main.o
-    ├── 📄 program.elf
-    └── 📄 program.bin
+2. Cấu hình GPIO là analog
+```c
+// Ví dụ cho PA0 (Kênh ADC 0)
+RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+GPIOA->MODER |= GPIO_MODER_MODER0;  // Đặt là chế độ analog
 ```
 
-### ℹ️ Note
-- Gcc là trình biên dịch cho máy tính (x86/x64)
-- arm-none-eabi-gcc là trình biên dịch cho vi điều khiển ARM
-- Cần thêm các tham số phù hợp với kiến trúc ARM Cortex-M4
-- Đường dẫn trong `-I` phải trỏ đến thư mục chứa file .h
-- Nên tạo thư mục build để chứa các file biên dịch
-
-### 📝 Chi tiết lệnh trong Makefile:
-
-#### 1. Biên dịch các file nguồn:
-```bash
-# Biên dịch file main.c
-arm-none-eabi-gcc -c main.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/main.o
-
-# Biên dịch các file trong thư mục Driver/Src
-arm-none-eabi-gcc -c Driver\Src\Led.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/led.o
-arm-none-eabi-gcc -c Driver\Src\ADC.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/ADC.o
-arm-none-eabi-gcc -c Driver\Src\clock.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/clock.o
-arm-none-eabi-gcc -c Driver\Src\delay.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/delay.o
-arm-none-eabi-gcc -c Driver\Src\capture.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/capture.o
-arm-none-eabi-gcc -c Driver\Src\Usart.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/Usart.o
+3. Cấu hình ADC
+```c
+// Ví dụ cấu hình cơ bản
+ADC1->CR2 |= ADC_CR2_ADON;  // Bật ADC
+ADC1->SQR3 = 0;  // Chọn kênh 0
+ADC1->SQR1 = 0;  // 1 lần chuyển đổi
+ADC1->CR2 |= ADC_CR2_CONT;  // Chế độ liên tục
 ```
 
-Trong đó:
-- `-c`: Chỉ biên dịch, không liên kết
-- `-mcpu=cortex-m4`: Chỉ định CPU đích
-- `-std=gnu11`: Sử dụng chuẩn GNU C11
-- `-IDriver\Inc`: Thêm thư mục chứa file header
-- `-o build/xxx.o`: File đầu ra
+## Operation Modes
+1. **Single Conversion**
+   - Một lần chuyển đổi khi được kích hoạt
+   - Thích hợp cho đọc giá trị không thường xuyên
 
-#### 2. Liên kết các file object:
-```bash
-arm-none-eabi-gcc build\ADC.o build\capture.o build\clock.o build\Delay.o build\Led.o build\main.o build\startup.o -T"STM32F411VETX_FLASH.ld" -Wl,-Map="file.map" -Wl,--gc-sections -static -o build/blink_led.elf
-```
+2. **Continuous Conversion**
+   - Chuyển đổi liên tục sau khi kích hoạt
+   - Phù hợp cho việc theo dõi liên tục
 
-Trong đó:
-- `build\*.o`: Các file object cần liên kết
-- `-T"STM32F411VETX_FLASH.ld"`: Script mô tả bố trí bộ nhớ
-- `-Wl,-Map="file.map"`: Tạo file map để debug
-- `-Wl,--gc-sections`: Loại bỏ code không sử dụng
-- `-static`: Liên kết tĩnh
-- `-o build/blink_led.elf`: File thực thi đầu ra
+3. **Scan Mode**
+   - Chuyển đổi nhiều kênh theo trình tự
+   - Hữu ích khi cần đọc nhiều cảm biến
 
-#### 3. Tạo file hex và binary:
-```bash
-# Tạo file hex để nạp và debug
-arm-none-eabi-objcopy -O ihex build/blink_led.elf build/blink_led.hex
+4. **Discontinuous Mode**
+   - Chuyển đổi một tập con các kênh
+   - Cho phép kiểm soát linh hoạt việc lấy mẫu
 
-# Tạo file binary để nạp vào flash
-arm-none-eabi-objcopy -O binary build/blink_led.elf build/blink_led.bin
-```
+## Ưu điểm
+- truyền nhanh hơn nhưng tính hiện digital truyền được xa hơn.
+- Vì đường dây điện có trở kháng nên khi truyền đi 10v thì còn 8. v
+- Còn digital thì truyền theo mức điện điện chuẩn TTL (0-0.8) low và (2.4 - Vcc) high.
 
-#### 4. Dọn dẹp và tạo mới:
-```bash
-# Xóa thư mục build
-rmdir /q /s build
+## References
+1. STM32F411 Reference Manual (RM0383) - Tài liệu tham khảo chính
+2. STM32F411 Datasheet - Thông số kỹ thuật
+3. Programming Manual (PM0214) - Hướng dẫn lập trình
 
-# Tạo lại thư mục build
-mkdir build
-```
-
-### 🔄 Quy trình sử dụng:
-1. `mingw32-make Clean`: Xóa các file đã biên dịch
-2. `mingw32-make All`: Biên dịch toàn bộ project
-3. Các file output trong thư mục `build`:
-   - `*.o`: File object
-   - `*.elf`: File thực thi
-   - `*.hex`: File hex để nạp/debug
-   - `*.bin`: File binary để nạp
-   - `*.map`: File map để debug
-
----
-
-## STM32 Startup và Linker Files
-
-### Startup Files
-File startup (ví dụ: `startup_stm32f411vetx.s`) là file assembly chứa:
-- Vector table chứa các interrupt handlers
-- Reset handler và các initialization code
-- Weak definitions cho các interrupt handlers
-- Stack initialization
-
-Mỗi dòng chip STM32 sẽ có file startup riêng, ví dụ:
-- STM32F411: `startup_stm32f411vetx.s`
-- STM32F401: `startup_stm32f401xc.s` 
-- STM32F103: `startup_stm32f103xb.s`
-
-### Linker Script Files
-Có 2 loại linker script chính:
-1. `STM32F411VETX_FLASH.ld`: Để chạy chương trình từ Flash memory
-   - Code được nạp vào Flash memory
-   - Data được copy vào RAM khi khởi động
-   - Thường dùng cho sản phẩm cuối
-
-2. `STM32F411VETX_RAM.ld`: Để chạy chương trình từ RAM
-   - Code và data đều nằm trong RAM
-   - Thường dùng cho debug và development
-   - Tốc độ thực thi nhanh hơn chạy từ Flash
-
-Linker script định nghĩa:
-- Memory layout (Flash, RAM, etc.)
-- Section placement (.text, .data, .bss)
-- Entry point
-- Stack và heap size
-
-### Lưu ý
-- File startup và linker script phải tương thích với chip đang sử dụng
-- Có thể lấy file mẫu từ STM32CubeMX hoặc STM32CubeIDE
-- Cần chỉnh sửa memory size trong linker script cho phù hợp với chip
-- File startup thường không cần chỉnh sửa
-
-### ST-LINK CLI Commands
-
-ST-LINK CLI là công cụ command line để tương tác với STM32 thông qua ST-LINK programmer. Một số lệnh cơ bản:
-
-#### Kiểm tra kết nối
-```bash
-ST-LINK_CLI -c SWD
-```
-Khi kết nối thành công, bạn sẽ thấy thông tin:
-- ST-LINK SN (Serial Number)
-- Firmware version
-- Connection mode
-- Device ID
-- Flash Size
-- Device family (vd: STM32F411xC/E)
-
-#### Đọc memory
-```bash
-ST-LINK_CLI -c SWD -r8 0x08000000 8
-```
-- `-r8`: Read 8-bit
-- `0x08000000`: Địa chỉ bắt đầu đọc (Flash memory)
-- `8`: Số byte cần đọc
-
-#### Nạp chương trình
-```bash
-ST-LINK_CLI -c SWD -P build/blink_led.hex
-```
-- `-P`: Program file
-- `-V`: Verify sau khi nạp
-- `-Rst`: Reset chip sau khi nạp
-
-### Lưu ý khi sử dụng ST-LINK
-- Đảm bảo đã cài đặt ST-LINK drivers
-- Kiểm tra kết nối vật lý (cáp USB, nguồn board)
-- SWD frequency mặc định là 4000kHz
-- Target voltage thường là 2.9V - 3.3V
-- Reset mode mặc định là Software reset
-
-<div align="center">
-  <i>Made with ❤️ for STM32 Development</i>
-</div>
+## Notes
+- Đảm bảo nguồn cấp phù hợp (2.4V - 3.6V)
+- Cân nhắc thời gian lấy mẫu dựa trên trở kháng đầu vào
+- Sử dụng DMA cho chuyển đổi liên tục tốc độ cao
+- Kiểm tra chính xác việc căn chỉnh dữ liệu (left/right alignment)
+- Tính toán thời gian lấy mẫu phù hợp với ứng dụng
+- Đảm bảo điện áp đầu vào không vượt quá Vref
+- Cân nhắc sử dụng bộ lọc nhiễu cho tín hiệu analog đầu vào
