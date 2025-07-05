@@ -43,7 +43,7 @@ void clock_init()
     *RCC_CFGR &= ~(0b111 << 10);        
     *RCC_CFGR |= (0b100 << 10);
 
-    uint32_t* FLASH_ACR = (uint32_t*)(FLASH_ADDR_BASE + 0x00);
+    uint32_t* FLASH_ACR = (uint32_t*)(FLASH_ADDR_BASE + 0x00); //latency flash
     *FLASH_ACR |= (3<<0);
 
     *RCC_CFGR |= 0b10 << 0;                  //select system clock in PLL
