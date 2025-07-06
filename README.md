@@ -351,3 +351,83 @@ void main(void) {
     }
 }
 ```
+
+## 🔑 IWDG Key Values
+
+### ⚡ Các giá trị key của IWDG
+| Key | Giá trị | Chức năng |
+|-----|----------|-----------|
+| KEY_RELOAD | 0xAAAA | Nạp lại giá trị counter |
+| KEY_ENABLE | 0xCCCC | Kích hoạt IWDG |
+| KEY_WRITE | 0x5555 | Cho phép ghi vào thanh ghi PR/RLR |
+| KEY_PROTECT | Khác | Bảo vệ thanh ghi (không cho ghi) |
+
+### 💡 Giải thích chi tiết
+1. **0xAAAA - KEY_RELOAD**
+   - Dùng để feed (refresh) watchdog
+   - Nạp lại giá trị từ RLR vào counter
+   - Ngăn watchdog reset hệ thống
+   ```c
+   IWDG->KR = 0xAAAA;  // Refresh counter
+   ```
+
+2. **0xCCCC - KEY_ENABLE**
+   - Kích hoạt IWDG hoạt động
+   - Sau khi enable không thể disable
+   - Counter bắt đầu đếm ngược
+   ```c
+   IWDG->KR = 0xCCCC;  // Start watchdog
+   ```
+
+3. **0x5555 - KEY_WRITE**
+   - Mở khóa để ghi cấu hình
+   - Cho phép truy cập PR và RLR
+   - Hiệu lực trong thời gian ngắn
+   ```c
+   IWDG->KR = 0x5555;  // Unlock registers
+   IWDG->PR = pr;      // Set prescaler
+   IWDG->RLR = rlr;    // Set reload value
+   ```
+
+### ⚠️ Lưu ý quan trọng
+1. **Thứ tự cấu hình**
+```c
+void IWDG_Init(uint8_t pr, uint16_t rlr) {
+    IWDG->KR = 0x5555;  // 1. Unlock first
+    IWDG->PR = pr;      // 2. Set prescaler
+    IWDG->RLR = rlr;    // 3. Set reload
+    IWDG->KR = 0xAAAA;  // 4. Reload counter
+    IWDG->KR = 0xCCCC;  // 5. Start IWDG
+}
+```
+
+2. **Timing quan trọng**
+```c
+// Sau khi write 0x5555
+// Phải cấu hình xong trước khi hết T_PVU và T_RVU
+if((IWDG->SR & IWDG_SR_PVU) == 0) {  // Check PR ready
+    IWDG->PR = pr;
+}
+if((IWDG->SR & IWDG_SR_RVU) == 0) {  // Check RLR ready
+    IWDG->RLR = rlr;
+}
+```
+
+3. **Không thể disable**
+```c
+// WRONG: Không thể tắt IWDG sau khi enable
+IWDG->KR = 0xCCCC;  // Enable
+// ... some code ...
+IWDG->KR = 0x0000;  // Trying to disable -> Không có tác dụng
+```
+
+### 🔒 Cơ chế bảo vệ
+1. **Write Protection**
+   - Thanh ghi chỉ có thể ghi khi unlock
+   - Tự động khóa sau một thời gian
+   - Ngăn thay đổi cấu hình ngoài ý muốn
+
+2. **Key Sequence**
+   - Phải ghi đúng giá trị key
+   - Các giá trị khác bị bỏ qua
+   - Bảo vệ khỏi ghi nhầm/nhiễu
