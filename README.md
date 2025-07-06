@@ -4,11 +4,60 @@
 Watchdog (WDG) là một bộ đếm thời gian được sử dụng để phát hiện và phục hồi từ các sự cố phần mềm. STM32F411 có 2 loại Watchdog:
 
 ### 🛡️ Independent Watchdog (IWDG)
-- 🔄 Sử dụng bộ dao động LSI (40 kHz)
+- 🔄 Sử dụng bộ dao động LSI (32.768 kHz hoặc 40 kHz tùy phiên bản chip)
 - 🔓 Hoạt động độc lập với clock chính
 - ⚡ Phù hợp cho việc phục hồi từ lỗi phần mềm
 
+### 🎯 Cấu trúc IWDG
+```mermaid
+graph TD
+    subgraph CORE["CORE"]
+        PR["Prescaler Register<br/>IWDG_PR"]
+        SR["Status Register<br/>IWDG_SR"]
+        RLR["Reload Register<br/>IWDG_RLR"]
+        KR["Key Register<br/>IWDG_KR"]
+        LSI["LSI Clock<br/>(32.768/40 kHz)"]
+        PS["8-bit<br/>prescaler"]
+        RV["12-bit reload value"]
+        DC["12-bit downcounter"]
+        RESET["IWDG reset"]
+
+        LSI --> PS
+        PR --> PS
+        PS --> DC
+        RLR --> RV
+        RV --> DC
+        DC --> RESET
+        SR -.- DC
+        KR -.- DC
+    end
+
+    style CORE fill:#f5f5f5,stroke:#333,stroke-width:2px
+    style RESET fill:#ffcccc,stroke:#ff0000
+```
+
+### ⚠️ Lưu ý về tần số LSI
+- LSI có thể là 32.768 kHz hoặc 40 kHz tùy phiên bản chip
+- Công thức tính timeout cần điều chỉnh theo tần số thực tế:
+```c
+// Với LSI = 32.768 kHz
+Timeout = (IWDG_RLR × Prescaler) / 32768
+
+// Với LSI = 40 kHz
+Timeout = (IWDG_RLR × Prescaler) / 40000
+```
+
+### 📝 Ví dụ tính timeout
+1. LSI = 32.768 kHz:
+   - Prescaler = 32, RLR = 4095
+   - Timeout = (4095 × 32) / 32768 = 4 giây
+
+2. LSI = 40 kHz:
+   - Prescaler = 32, RLR = 4095
+   - Timeout = (4095 × 32) / 40000 = 3.276 giây
+
 ### 🪟 Window Watchdog (WWDG)
+- 🔄 Sử dụng bộ dao động HSI
 - ⏰ Sử dụng clock từ APB1
 - 📊 Có thể cấu hình cửa sổ thời gian
 - 🎯 Phát hiện lỗi thời gian thực chính xác hơn

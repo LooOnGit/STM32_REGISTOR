@@ -7,8 +7,9 @@ All:
 	arm-none-eabi-gcc -c Driver\Src\Usart.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/Usart.o
 	arm-none-eabi-gcc -c Driver\Src\capture.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/capture.o
 	arm-none-eabi-gcc -c Driver\Src\pwm.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/pwm.o
+	arm-none-eabi-gcc -c Driver\Src\low_power.c -mcpu=cortex-m4 -std=gnu11 -IDriver\Inc -o build/low_power.o
 	arm-none-eabi-gcc -c -x assembler-with-cpp startup_stm32f411vetx.s -mcpu=cortex-m4 -std=gnu11 -o build/startup.o
-	arm-none-eabi-gcc build\ADC.o build\capture.o build\clock.o build\Delay.o build\Led.o build\pwm.o build\main.o build\startup.o -T"STM32F411VETX_FLASH.ld" -Wl,-Map="file.map" -Wl,--gc-sections -static -o build/blink_led.elf
+	arm-none-eabi-gcc build\ADC.o build\capture.o build\clock.o build\Delay.o build\Led.o build\pwm.o build\main.o build\startup.o build\low_power.o -T"STM32F411VETX_FLASH.ld" -Wl,-Map="file.map" -Wl,--gc-sections -static -o build/blink_led.elf
 	arm-none-eabi-objcopy -O ihex build/blink_led.elf build/blink_led.hex
 	arm-none-eabi-objcopy -O binary build/blink_led.elf build/blink_led.bin
 Clean:
