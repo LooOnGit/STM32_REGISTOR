@@ -130,3 +130,224 @@ STM32F411 cung cấp 3 chế độ tiết kiệm điện:
 - 🌡️ Xem xét điều kiện môi trường ảnh hưởng tới LSI
 - 💾 Backup dữ liệu quan trọng trước khi reset
 - ⚡ Xử lý ngắt WWDG một cách phù hợp
+
+## 🚨 HardFault Handler
+
+### ⚡ Giới thiệu
+HardFault là exception handler mức độ cao nhất, được gọi khi có lỗi nghiêm trọng trong chương trình.
+thường khi vào hardfault thì bị treo trong while(1).
+
+### 🔍 Các nguyên nhân chính
+1. **Lỗi truy cập bộ nhớ**
+   - Truy cập vùng nhớ không được phép
+   - Truy cập địa chỉ không căn chỉnh (unaligned access)
+   - Truy cập ngoài vùng nhớ Stack
+
+2. **Lỗi thực thi**
+   - Chia cho 0
+   - Lệnh không hợp lệ
+   - Truy cập thanh ghi không tồn tại
+
+3. **Lỗi Bus**
+   - Lỗi truy cập peripheral
+   - Timeout khi truy cập bus
+   - Lỗi đọc/ghi peripheral
+
+4. **Lỗi Exception**
+   - Exception lồng nhau quá sâu
+   - Trả về từ exception handler không đúng
+   - Exception priority không hợp lệ
+
+### 💻 Ví dụ code gây HardFault
+```c
+// 1. Chia cho 0
+int x = 0;
+int y = 1/x;  // -> HardFault
+
+// 2. Truy cập con trỏ NULL
+int* ptr = NULL;
+*ptr = 100;   // -> HardFault
+
+// 3. Truy cập địa chỉ không căn chỉnh
+int* unaligned = (int*)0x20000001; // Địa chỉ lẻ
+*unaligned = 100;  // -> HardFault
+
+// 4. Tràn stack
+void recursive() {
+    int arr[1000];
+    recursive();  // -> Stack overflow -> HardFault
+}
+```
+
+### 🛠️ Xử lý HardFault
+1. **Cách 1: Sử dụng Watchdog**
+```c
+void main() {
+    IWDG_Init(IWDG_PRESCALER_32, 1000); // 1s timeout
+    
+    while(1) {
+        IWDG_Refresh();
+        // Nếu có HardFault -> không refresh -> reset
+    }
+}
+```
+
+2. **Cách 2: Custom HardFault Handler**
+```c
+void HardFault_Handler(void) {
+    // 1. Lưu thông tin lỗi
+    // 2. Reset hệ thống hoặc xử lý phục hồi
+    NVIC_SystemReset();
+}
+```
+
+### ⚠️ Phòng tránh HardFault
+1. **Kiểm tra đầu vào**
+```c
+void divide(int x) {
+    if(x != 0) {
+        int result = 1/x;
+    }
+}
+```
+
+2. **Kiểm tra con trỏ**
+```c
+void write_data(int* ptr) {
+    if(ptr != NULL) {
+        *ptr = 100;
+    }
+}
+```
+
+3. **Kiểm tra vùng nhớ**
+```c
+#define BUFFER_SIZE 100
+void write_buffer(int index, int value) {
+    if(index < BUFFER_SIZE) {
+        buffer[index] = value;
+    }
+}
+```
+
+## 🔄 Feed Watchdog
+
+### ⚡ Khái niệm
+Feed watchdog (hay Refresh watchdog) là việc nạp lại giá trị đếm của watchdog timer để ngăn nó reset hệ thống.
+
+### 🎯 Cách hoạt động
+```mermaid
+graph TD
+    A[Start] --> B{Counter > 0?}
+    B -->|Yes| C[Chương trình chạy]
+    C --> D{Cần feed?}
+    D -->|Yes| E[Feed watchdog<br/>Counter = Reload value]
+    E --> C
+    D -->|No| F[Counter--]
+    F --> B
+    B -->|No| G[Reset System]
+```
+
+### 💡 Nguyên tắc Feed Watchdog
+1. **Thời điểm feed**
+   - Feed định kỳ trước khi counter = 0
+   - Với WWDG: Feed trong cửa sổ cho phép
+   - Không feed quá sớm hoặc quá muộn
+
+2. **Vị trí đặt lệnh feed**
+   - Trong main loop
+   - Sau khi hoàn thành task quan trọng
+   - Trong task định kỳ của RTOS
+   ```c
+   while(1) {
+       // Tasks quan trọng
+       important_task();
+       
+       // Feed watchdog
+       IWDG_Refresh();
+       
+       // Tasks không quan trọng
+       normal_task();
+   }
+   ```
+
+3. **Trường hợp KHÔNG feed**
+   - Trong ngắt (ISR)
+   - Trong critical section
+   - Khi đang xử lý lỗi
+   ```c
+   void error_handler(void) {
+       // KHÔNG feed watchdog
+       // Để hệ thống tự reset
+       while(1);
+   }
+   ```
+
+### ⚠️ Lỗi thường gặp
+1. **Feed quá thường xuyên**
+```c
+while(1) {
+    IWDG_Refresh();  // BAD: Không phát hiện được treo
+    if(error) {
+        // Không bao giờ reset vì feed liên tục
+    }
+}
+```
+
+2. **Feed không đều**
+```c
+while(1) {
+    heavy_task();    // Task có thời gian không ổn định
+    IWDG_Refresh();  // Có thể bị trễ -> reset ngoài ý muốn
+}
+```
+
+3. **Feed trong HardFault**
+```c
+void HardFault_Handler(void) {
+    IWDG_Refresh();  // BAD: Không nên feed
+    while(1);        // Hệ thống sẽ bị treo
+}
+```
+
+### ✅ Cách Feed đúng
+1. **Feed có điều kiện**
+```c
+while(1) {
+    if(system_is_healthy()) {
+        IWDG_Refresh();
+    }
+    run_tasks();
+}
+```
+
+2. **Feed với RTOS**
+```c
+void watchdog_task(void *arg) {
+    while(1) {
+        IWDG_Refresh();
+        osDelay(WATCHDOG_PERIOD);
+    }
+}
+```
+
+3. **Feed với state machine**
+```c
+void main(void) {
+    IWDG_Init(IWDG_PRESCALER_32, 1000);
+    
+    while(1) {
+        switch(system_state) {
+            case NORMAL:
+                run_normal_tasks();
+                IWDG_Refresh();
+                break;
+                
+            case ERROR:
+                // Không feed -> để hệ thống reset
+                handle_error();
+                break;
+        }
+    }
+}
+```

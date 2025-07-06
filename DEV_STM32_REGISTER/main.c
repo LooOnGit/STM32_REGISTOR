@@ -17,6 +17,8 @@ void setup()
 int main(){
     setup();
     int cnt = 0;
+    enable_iwdg();
+
     while(1){
         // led_control(ORANGE, ON);
         // // delay(1000);
