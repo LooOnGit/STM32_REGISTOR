@@ -22,8 +22,8 @@ void adc_init()
      // Injected sequence length = 00: 1 convertion
     //set source for JSQ4 is temp sensor
     
-    * ADC_JSQR |= (ADC_IN << 15);  
-    * ADC_JSQR |= (ADC_IN1 << 10);
+    * ADC_JSQR |= (ADC_IN << 15);  //set source for JSQ4 is temp sensor (IN16)
+    * ADC_JSQR |= (ADC_IN1 << 10); //set source for JSQ1 is pal (IN1)
     
     * ADC_CR2 |= 1<<0; //Enable ADC
     * ADC_CCR |= 1<< 23;  //enabel temp sensor
