@@ -4,6 +4,5 @@
 #define INC_DELAY_H_
 
 void delay_init();
-void delay(uint32_t sec);
-
+void delay_ms(uint32_t msec);
 #endif /* INC_DELAY_H_ */

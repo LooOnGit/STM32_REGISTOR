@@ -1,26 +1,30 @@
+/*
+ * led.h
+ *
+ *  Created on: Aug 7, 2023
+ *      Author: maitr
+ */
 
 #ifndef INC_LED_H_
 #define INC_LED_H_
 
+#define GPIOA_BASE_ARR 0x40020000
+#define GPIOD_BASE_ARR 0x40020C00
 
 
-typedef enum {
-	GREEN = 12,
-	ORANGE = 13,
-	RED = 14,
-	BLUE = 15
-}led_color;
-
-
-typedef enum {
-	ON = 1,
-	OFF = 0,
-}led_stage;
-
-void led_control(led_color led,led_stage stage);
-void led_init();
-
-
+void leds_init();
+typedef enum
+{
+	GREEN_LED = 12,
+	 ORANGE_LED,
+	RED_LED,
+	BLUE_LED
+}led_num_t;
+typedef enum
+{
+	LED_OFF,
+	LED_ON
+}led_state_t;
+void led_control(led_num_t led, led_state_t state);
 
 #endif /* INC_LED_H_ */
-

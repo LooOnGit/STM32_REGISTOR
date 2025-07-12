@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "clock.h": "c",
+        "freertos.h": "c",
+        "low_power.h": "c",
+        "event_groups.h": "c",
+        "adc.h": "c",
+        "stdint.h": "c",
+        "usart.h": "c",
+        "semphr.h": "c",
+        "led.h": "c",
+        "task.h": "c",
+        "delay.h": "c",
+        "pwm.h": "c"
+    }
+}

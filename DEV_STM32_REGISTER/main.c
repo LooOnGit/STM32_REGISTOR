@@ -4,6 +4,8 @@
 #include "clock.h"
 #include "pwm.h"
 #include "low_power.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 void SystemInit ();
 void setup()

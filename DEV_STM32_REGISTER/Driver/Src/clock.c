@@ -1,12 +1,16 @@
-/*
-  setup RCC to generate a clock 100Mhz(max)
-*/
-#include<stdint.h>
-#define RCC_ADDR_BASE   0x40023800   //address of RCC pheriperal
-#define FLASH_ADDR_BASE 0x40023c00  //address of FLash pheriperal
+
+#include <stdint.h>
+#include "clock.h"
+#define RCC_ADDR_BASE 0x40023800    // Start address of RCC pheriperal
+#define FLASH_ADDR_BASE 0x40023C00  // Start address of FLASH pheriperal
+/**
+ * @brief setup RCC to generate a clock 100Mhz (max)
+ * @param None
+ * @retval None
+ */
 void clock_init()
 {
-  /*
+    /*
     * PLL clock(source from HSE), M = /8, N = x200, P = /2
     */
    uint32_t* RCC_CR = (uint32_t*)(RCC_ADDR_BASE + 0x00);
@@ -24,9 +28,9 @@ void clock_init()
    *RCC_PLLCFGR &= ~(0b111111111 << 6);
    *RCC_PLLCFGR |= (200 << 6);
 
-   //set P div = 8
+   //set P div = 2
     *RCC_PLLCFGR &= ~(0b11 << 16);
-    *RCC_PLLCFGR |= (0b11 << 16);
+    *RCC_PLLCFGR |= (0b00 << 16);
 
     //set PLL source is HSE
     *RCC_PLLCFGR |= (1<<22);
@@ -47,30 +51,29 @@ void clock_init()
     *FLASH_ACR |= (3<<0);
 
     *RCC_CFGR |= 0b10 << 0;                  //select system clock in PLL
+    
 }
 
-
-
-void clock_enable_AHB1(int peripheral)
+void clock_enable_AHB1(AHP1_peripheral_t peripheral)
 {
     uint32_t* RCC_AHB1ENR = (uint32_t*)(RCC_ADDR_BASE + 0x30);
-    * RCC_AHB1ENR |=(1 << peripheral);
+    *RCC_AHB1ENR |= (1<<peripheral);
 }
 
-void clock_enable_AHB2(int peripheral)
+void clock_enable_AHB2(AHP2_peripheral_t peripheral)
 {
     uint32_t* RCC_AHB2ENR = (uint32_t*)(RCC_ADDR_BASE + 0x34);
-    * RCC_AHB2ENR |=(1 << peripheral);
+    *RCC_AHB2ENR |= (1<<peripheral);
 }
 
-void clock_enable_APB1(int peripheral)
+void clock_enable_APB1(ABP1_peripheral_t peripheral)
 {
     uint32_t* RCC_APB1ENR = (uint32_t*)(RCC_ADDR_BASE + 0x40);
-    * RCC_APB1ENR |=(1 << peripheral);
+    *RCC_APB1ENR |= (1<<peripheral);
 }
 
-void clock_enable_APB2(int peripheral)
+void clock_enable_APB2(ABP2_peripheral_t peripheral)
 {
     uint32_t* RCC_APB2ENR = (uint32_t*)(RCC_ADDR_BASE + 0x44);
-    * RCC_APB2ENR |=(1 << peripheral);
+    *RCC_APB2ENR |= (1<<peripheral);
 }

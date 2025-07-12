@@ -1,6 +1,6 @@
 #include <stdint.h>
+#include "capture.h"
 #include "clock.h"
-
 
 #define TIM5_ADDR_BASE 0x40000C00 
 #define GPIOA_ADDR_BASE 0x40020000
