@@ -52,6 +52,28 @@ static void UART_send_1byte(char data)
 	*SR &= ~(1<<6); //clear TC flag
 }
 
+void UART1_Init()
+{
+	clock_enable_APB2(USART1_peripheral);
+	clock_enable_AHB1(GPIOB_peripheral);
+
+	uint32_t* MODER = (uint32_t*)(0x40020400);
+	*MODER |= (0b10 << 12) | (0b10 << 14);		//set PB6 (U1Tx), PB7(U1Rx)
+
+	uint32_t* AFRL = (uint32_t*)(0x40020420);
+	*AFRL  |= (0b0111 << 24) | (0b0111 << 28);
+
+	uint32_t* BRR = (uint32_t*)(0x40011008);
+	*BRR = (104<<4) | 3;
+
+	uint32_t* CR1 = (uint32_t*)(0x4001100c);
+
+//	uint32_t* CR3 = (uint32_t*)(0x40011014);
+//	*CR3 |= (1<<6);
+
+	*CR1 |= (1<< 3)|(1<<2)|(1<<13);
+}
+
 
 void UART_send_string(char *msg)
 {

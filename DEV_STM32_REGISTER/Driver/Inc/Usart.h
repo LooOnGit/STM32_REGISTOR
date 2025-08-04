@@ -4,6 +4,7 @@
 #define INC_UART_H_
 
 void UART_Init();
+void UART1_Init();
 void UART_send_string(char *msg);
 char UART_read_1byte();
 void USART1_IRQHandler();
